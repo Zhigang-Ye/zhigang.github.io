@@ -1,0 +1,56 @@
+
+{
+  "layout": "single-column",
+  "text": {
+    "en": "This body of work is titled \"The Last Talk\" (2020). The final presentation combines video and interactive installation, anchored by six independently trained natural language models. Each model was trained on a distinct corpus, and under predefined rules the six chatbots converse and autonomously decide when to end their dialogue (special tokens were appended during pretraining to mark conversation termination).\n\nContext: created in 2019–2020, when AI NLP was still nascent and full of artifacts—much like the visual glitches in current AI image generation. Small models then struggled with coherent logic and syntax, yet something decipherable lingered. AI interprets AI, producing utterances that humans cannot fully grasp. In this recursive loop, independent of human understanding or application, we sought a non-anthropocentric lens to examine the text and its unique aesthetics. After interpreting the AI dialogue, we assigned roles, images, and identities to the agents, imagined five rooms with a round table, and staged six characters talking and leaving in turn. Through scene building, casting, rehearsal, and filming, the script was finally edited into a 27‑minute short film.",
+    "cn": "该项目名为《The Last Talk》（2020）。最终呈现结合了影像与互动装置，核心是六个分别训练的自然语言模型。每个模型在训练阶段输入不同的语料，并在我们设定的规则下彼此对话，能自主决定何时结束（预训练时我们统一在语料末尾添加特殊字符，用于对话时识别结束标记）。\n\n背景：作品创作于 2019–2020 年，彼时 NLP 尚在早期且充满“伪影”（类似当下 AI 图像的瑕疵）。当时的小模型难以保持清晰的逻辑与语序，但其中又隐含某种可被“解读”的东西。AI 与 AI 互相诠释彼此的人类难以完全理解的语句，在独立于人类理解与应用的递归过程中，我们尝试以非人类中心的视角审视这些文本的独特美感。我们在解读 AI 对话后，为其赋予角色、形象与身份，构想出五个房间与一张圆桌，六个角色轮流对话与离场。经过场景搭建、选角、排练与拍摄，最终剪辑成一部 27 分钟的短片。",
+    "tw": "该项目名为《The Last Talk》（2020）。最终呈现结合了影像与互动装置，核心是六个分别训练的自然语言模型。每个模型在训练阶段输入不同的语料，并在我们设定的规则下彼此对话，能自主决定何时结束（预训练时我们统一在语料末尾添加特殊字符，用于对话时识别结束标记）。\n\n背景：作品创作于 2019–2020 年，彼时 NLP 尚在早期且充满“伪影”（类似当下 AI 图像的瑕疵）。当时的小模型难以保持清晰的逻辑与语序，但其中又隐含某种可被“解读”的东西。AI 与 AI 互相诠释彼此的人类难以完全理解的语句，在独立于人类理解与应用的递归过程中，我们尝试以非人类中心的视角审视这些文本的独特美感。我们在解读 AI 对话后，为其赋予角色、形象与身份，构想出五个房间与一张圆桌，六个角色轮流对话与离场。经过场景搭建、选角、排练与拍摄，最终剪辑成一部 27 分钟的短片。"
+  },
+  "imagesA": [
+    "A/1.jpg",
+    "A/2.jpg",
+    "A/3.jpg",
+    "A/4.jpg",
+    "A/5.jpg",
+    "A/6.jpg",
+    "A/7.jpg",
+    "A/8.jpg",
+    "A/9.jpg",
+    "A/10.jpg",
+    "A/11.jpg",
+    "A/12.jpg",
+    "A/13.jpg"
+  ],
+  "fpImages": [
+    "FP/1.jpg"
+  ],
+  "imagesB": [
+    "B/64585638_2248757245438974_5219419475585007616_n.jpg",
+    "B/64748712_457123544863673_4292893505400864768_n.jpg",
+    "B/64782673_2248757248772307_1388569012765458432_n.jpg",
+    "B/64862087_589021268293523_7786652815748759552_n.jpg",
+    "B/65145682_589021258293524_7255471915077206016_n.jpg",
+    "B/66314184_348465122515888_3269806091898191872_n.jpg",
+    "B/66795472_348465012515899_5746514230270492672_n.jpg",
+    "B/67033608_878669092491998_8948349479707213824_n.jpg",
+    "B/67085196_348465192515881_7639122974053761024_n.jpg",
+    "B/67150048_483759222380508_8643160837504106496_n.jpg",
+    "B/67402071_2384521408454053_3277352847653470208_n.jpg",
+    "B/67416932_2341012745946958_4719201969107894272_n.jpg",
+    "B/67541993_1282457745234983_5165352760815648768_n.jpg",
+    "B/WechatIMG1306.jpg",
+    "B/WechatIMG1307.jpg",
+    "B/WechatIMG1308.jpg",
+    "B/WechatIMG1309.jpg",
+    "B/WechatIMG1310.jpg",
+    "B/WechatIMG1311.jpg",
+    "B/WechatIMG1312.jpg",
+    "B/WechatIMG1313.jpg",
+    "B/WechatIMG1321.jpg",
+    "B/WechatIMG1322.jpg",
+    "B/WechatIMG1323.jpg",
+    "B/WechatIMG1323_upscayl_4x_ultramix_balanced.png",
+    "B/WechatIMG1324.jpg",
+    "B/WechatIMG1325.jpg"
+  ]
+}
