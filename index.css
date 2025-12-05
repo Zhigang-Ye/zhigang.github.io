@@ -1,0 +1,60 @@
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-white text-primary font-sans overflow-x-hidden antialiased;
+  }
+  
+  /* Hide scrollbar for clean look */
+  ::-webkit-scrollbar {
+    width: 0px;
+    background: transparent;
+  }
+}
+
+/* --- Local Font Definitions --- */
+/* Ensure your files in public/font/ match these paths */
+
+/* English Fonts (Previous Examples) */
+@font-face {
+  font-family: 'Neue Haas Grotesk';
+  src: url('/font/english/NeueHaasGroteskDisplay-Roman.woff2') format('woff2'),
+       url('/font/english/NeueHaasGroteskDisplay-Roman.woff') format('woff');
+  font-weight: 400;
+  font-style: normal;
+}
+@font-face {
+  font-family: 'Editorial New';
+  src: url('/font/english/EditorialNew-Regular.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+}
+@font-face {
+  font-family: 'Suisse Int';
+  src: url('/font/english/SuisseIntl-Regular.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+}
+@font-face {
+  font-family: 'GT America';
+  src: url('/font/english/GTAmerica-Regular.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+}
+
+/* Chinese Fonts (Previous Examples) */
+@font-face {
+  font-family: 'FZSong'; /* FangZheng Song */
+  src: url('/font/simplified/FZSong.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+}
+@font-face {
+  font-family: 'FZHei'; /* FangZheng Hei */
+  src: url('/font/simplified/FZHei.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+}

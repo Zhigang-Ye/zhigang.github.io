@@ -1,0 +1,137 @@
+
+{
+  "contact": {
+    "name": {
+      "en": "Zhigang Ye",
+      "cn": "叶智港",
+      "tw": "葉智港"
+    },
+    "location": {
+      "en": "Base London/Hangzhou",
+      "cn": "常驻 伦敦/杭州",
+      "tw": "常駐 倫敦/杭州"
+    },
+    "email": "7256028@network.rca.ac.uk",
+    "instagram": "Zhigang.x",
+    "phones": [
+      "(+86) 18758100197",
+      "(+44) 07940889153"
+    ]
+  },
+  "timeline": [
+    { 
+      "year": "1997", 
+      "text": {
+        "en": "Born in Wenzhou, China",
+        "cn": "出生于中国温州",
+        "tw": "出生於中國溫州"
+      }
+    },
+    { 
+      "year": "2015-2017", 
+      "text": {
+        "en": "Lived and studied in Hangzhou, studied at Hangzhou No. 2 High School",
+        "cn": "生活学习于杭州，就读于杭州第二中学",
+        "tw": "生活學習於杭州，就讀於杭州第二中學"
+      }
+    },
+    { 
+      "year": "2017-2020", 
+      "text": {
+        "en": "Studied at National Taipei University of the Arts, Taiwan",
+        "cn": "就读于国立台北艺术大学，中国",
+        "tw": "就讀於國立臺北藝術大學，中國"
+      }
+    },
+    { 
+      "year": "2020-2022", 
+      "text": {
+        "en": "Studied MA in Photography at the Royal College of Art, UK",
+        "cn": "就读于英国皇家艺术学院摄影系硕士",
+        "tw": "就讀於英國皇家藝術學院攝影系碩士"
+      }
+    },
+    { 
+      "year": "2022-2025", 
+      "text": {
+        "en": "Lived and worked in London/Shanghai/Hangzhou",
+        "cn": "工作生活于伦敦、上海、杭州",
+        "tw": "工作生活於倫敦、上海、杭州"
+      }
+    },
+    { 
+      "year": "Since 2025", 
+      "text": {
+        "en": "Studying for a PhD in Soah at the Royal College of Art, UK",
+        "cn": "就读于英国皇家艺术学院人文学院博士",
+        "tw": "就讀於英國皇家藝術學院人文學院博士"
+      }
+    }
+  ],
+  "exhibitions": [
+    { 
+      "year": "2025", 
+      "text": {
+        "en": "Surfaced, Beaconsfield Gallery, London, UK",
+        "cn": "Surfaced, Beaconsfield 画廊, 伦敦, 英国",
+        "tw": "Surfaced, Beaconsfield 畫廊, 倫敦, 英國"
+      }
+    },
+    { 
+      "year": "2022", 
+      "text": {
+        "en": "RCA Photography MA 22 Degree Show, RCA Battersea Campus, London, UK",
+        "cn": "RCA 摄影 MA 22 毕业展, RCA Battersea 校区, 伦敦, 英国",
+        "tw": "RCA 攝影 MA 22 畢業展, RCA Battersea 校區, 倫敦, 英國"
+      }
+    },
+    { 
+      "year": "", 
+      "text": {
+        "en": "Uncertainty Principle, The Ugly Duck, London, UK",
+        "cn": "不确定性原理, The Ugly Duck, 伦敦, 英国",
+        "tw": "不確定性原理, The Ugly Duck, 倫敦, 英國"
+      }
+    },
+    { 
+      "year": "2021", 
+      "text": {
+        "en": "Third Floor 3rd, RCA, Battersea, London, UK",
+        "cn": "Third Floor 3rd, RCA, Battersea, 伦敦, 英国",
+        "tw": "Third Floor 3rd, RCA, Battersea, 倫敦, 英國"
+      }
+    },
+    { 
+      "year": "2019", 
+      "text": {
+        "en": "Reentry, Songshan Warehouse No. 3, Taipei, Taiwan",
+        "cn": "Reentry, 松山3号仓库, 台北, 中国",
+        "tw": "Reentry, 松山3號倉庫, 台北, 中國"
+      }
+    },
+    { 
+      "year": "2018", 
+      "text": {
+        "en": "Marriott Hotel Archive, Cattin Art Space, Taipei, Taiwan",
+        "cn": "万豪酒店档案, Cattin 艺术空间, 台北, 中国",
+        "tw": "萬豪酒店檔案, Cattin 藝術空間, 台北, 中國"
+      }
+    },
+    { 
+      "year": "2017", 
+      "text": {
+        "en": "Back Street, Underground Art Gallery of Taipei National University of the Arts, Taipei, Taiwan",
+        "cn": "Back Street, 国立台北艺术大学地下美术馆, 台北, 中国",
+        "tw": "Back Street, 國立臺北藝術大學地下美術館, 台北, 中國"
+      }
+    },
+    { 
+      "year": "", 
+      "text": {
+        "en": "Free Art Fair, Songshan Warehouse No. 3, Taipei, Taiwan",
+        "cn": "自由艺术博览会, 松山3号仓库, 台北, 中国",
+        "tw": "自由藝術博覽會, 松山3號倉庫, 台北, 中國"
+      }
+    }
+  ]
+}
