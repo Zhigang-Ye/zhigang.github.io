@@ -1,0 +1,27 @@
+
+{
+  "biography": "biography/data.json",
+  "portfolio": "portfolio/data.json",
+  "text": {
+    "shortStories": [
+      "text/short_stories/ss1.json",
+      "text/short_stories/ss2.json",
+      "text/short_stories/ss3.json"
+    ],
+    "memoNovels": [
+      "text/memo_novels/n1.json",
+      "text/memo_novels/n2.json",
+      "text/memo_novels/n3.json",
+      "text/memo_novels/n4.json",
+      "text/memo_novels/n5.json",
+      "text/memo_novels/n6.json",
+      "text/memo_novels/n7.json",
+      "text/memo_novels/n8.json",
+      "text/memo_novels/n9.json"
+    ],
+    "writing": [
+      "text/essays/e1.json"
+    ],
+    "diary": []
+  }
+}
