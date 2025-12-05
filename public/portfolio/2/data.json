@@ -1,0 +1,13 @@
+
+{
+  "layout": "single-column",
+  "text": {
+    "en": "The work is founded upon a recursive protocol of image processing: a full-body selfie is physically bisected, and the resulting lacunae are fed into a generative AI model for Inpainting. Akin to asexual fission, the image subject splits and proliferates within a repetitive cycle of 'severance-generation'.\n\nThe severance of photographic indexicality here forms a cult-like technical ritual, summoning countless ghostly iterations of the self. The football field and the team serve as both metaphor and site: on one side lies an absurd and fanatical fantasy of fragmentation; on the other, a childhood sense of nostalgic lack and loneliness.\n\nAs Derrida states: « La frontière entre le vivant et le mort, le réel et l'image n'est pas clairement discernable. Le spectre est toujours un revenant à venir, il déconstruit la métaphysique de la présence du “ici et maintenant”. »\n\nIn this interplay of difference and repetition, the contingency and imagination of the machine prove far more feverish than steel or electricity. It is, ultimately, a joke—but one that offers solace.",
+    "cn": "本作品建立在一种递归式的图像处理协议之上：全身自拍被对折剪开，各自的缺失区域（lacunae）被输入生成式AI模型进行补全（Inpainting）。如无性裂变（fission）一般——图像主体在反复的“分割-生成”循环中分裂、增殖。\n\n摄影指涉性（indexicality）的割裂在此形成一种邪典式（cult-like）的技术仪式，召回无数的幽灵的自我。球场、球队作为一种隐喻与场所，一侧是荒诞与狂热的分裂臆想，另一侧是童年的、乡愁式匮乏与孤独。\n\n如德里达所说：“生者与死者、现实与影像之间的界限并非清晰可辨。幽灵总是即将来临的回访者，它解构了‘此时此地’的在场形而上学。”\n\n在这差异重复的游戏间，机器的偶然与想象远比钢铁与电来的狂热，这只是一个玩笑，但聊以慰藉。",
+    "tw": "本作品建立在一種遞歸式的圖像處理協議之上：全身自拍被對折剪開，各自的缺失區域（lacunae）被輸入生成式AI模型進行補全（Inpainting）。如無性裂變（fission）一般——圖像主體在反覆的「分割-生成」循環中分裂、增殖。\n\n攝影指涉性（indexicality）的割裂在此形成一種邪典式（cult-like）的技術儀式，召回無數的幽靈的自我。球場、球隊作為一種隱喻與場所，一側是荒誕與狂熱的分裂臆想，另一側是童年的、鄉愁式匱乏與孤獨。\n\n如德希達所說：「生者與死者、現實與影像之間的界限並非清晰可辨。幽靈總是即將來臨的回訪者，它解構了『此時此地』的在場形而上學。」\n\n在這差異重複的遊戲間，機器的偶然與想像遠比鋼鐵與電來的狂熱，這只是一個玩笑，但聊以慰藉。"  },
+  "imagesA": [
+    "A/1.jpg",
+    "A/2.jpg"
+  ],
+  "imagesB": []
+}
