@@ -1,0 +1,131 @@
+
+[
+  {
+    "id": "1",
+    "title": {
+      "en": "A Map Without Treasure",
+      "cn": "没有宝藏的藏宝图",
+      "tw": "沒有寶藏的藏寶圖"
+    },
+    "year": "2025",
+    "description": {
+      "en": "Exploring the cartography of loss.",
+      "cn": "探索缺失的制图学。",
+      "tw": "探索缺失的製圖學。"
+    },
+    "imageUrl": "https://picsum.photos/1200/600?random=1",
+    "folderPath": "portfolio/1"
+  },
+  {
+    "id": "2",
+    "title": {
+      "en": "Soon, we can have a football team",
+      "cn": "很快，我们就能有一支球队",
+      "tw": "很快，我們就能有一支球隊"
+    },
+    "year": "2025",
+    "description": {
+      "en": "Installation art regarding collective absurdity.",
+      "cn": "关于集体荒诞性的装置艺术。",
+      "tw": "關於集體荒誕性的裝置藝術。"
+    },
+    "imageUrl": "https://picsum.photos/800/1200?random=2",
+    "folderPath": "portfolio/2"
+  },
+  {
+    "id": "3",
+    "title": {
+      "en": "I Wish You Were Here",
+      "cn": "我愿你在此",
+      "tw": "我願你在此"
+    },
+    "year": "2025",
+    "description": {
+      "en": "A series exploring the distance between memory and presence.",
+      "cn": "探索记忆与在场之间距离的系列作品。",
+      "tw": "探索記憶與在場之間距離的系列作品。"
+    },
+    "imageUrl": "https://picsum.photos/1000/1000?random=3",
+    "folderPath": "portfolio/3"
+  },
+  {
+    "id": "4",
+    "title": {
+      "en": "The Plant I Made",
+      "cn": "此树是我造",
+      "tw": "此樹是我造"
+    },
+    "year": "2022",
+    "description": {
+      "en": "Artificial nature and digital organic growth.",
+      "cn": "人造自然与数字有机生长。",
+      "tw": "人造自然與數字有機生長。"
+    },
+    "imageUrl": "https://picsum.photos/1200/800?random=4",
+    "folderPath": "portfolio/4"
+  },
+  {
+    "id": "5",
+    "title": {
+      "en": "As If a Cut of Light",
+      "cn": "仿佛被光所分割",
+      "tw": "彷彿被光所分割"
+    },
+    "year": "2021",
+    "description": {
+      "en": "Photography exploring light and shadow boundaries.",
+      "cn": "探索光影边界的摄影作品。",
+      "tw": "探索光影邊界的攝影作品。"
+    },
+    "imageUrl": "https://picsum.photos/1600/900?random=5",
+    "folderPath": "portfolio/5"
+  },
+  {
+    "id": "6",
+    "title": {
+      "en": "DUNE",
+      "cn": "沙丘",
+      "tw": "沙丘"
+    },
+    "year": "2024",
+    "description": {
+      "en": "A landscape of silence and shifting sands.",
+      "cn": "寂静与流沙的景观。",
+      "tw": "寂靜與流沙的景觀。"
+    },
+    "imageUrl": "https://picsum.photos/1200/800?random=6",
+    "folderPath": "portfolio/6"
+  },
+  {
+    "id": "7",
+    "title": {
+      "en": "Cerulean Reverie",
+      "cn": "蔚蓝遐想",
+      "tw": "蔚藍遐想"
+    },
+    "year": "2024",
+    "description": {
+      "en": "Dreams dissolved in blue.",
+      "cn": "溶解在蓝色中的梦。",
+      "tw": "溶解在藍色中的夢。"
+    },
+    "imageUrl": "https://picsum.photos/800/1200?random=7",
+    "folderPath": "portfolio/7"
+  },
+  {
+    "id": "8",
+    "title": {
+      "en": "The Last Talk",
+      "cn": "最后的对话",
+      "tw": "最後的對話"
+    },
+    "year": "2020",
+    "description": {
+      "en": "Six independent NLP agents converse under preset rules, forming a video/interactive installation exploring AI-to-AI dialogue.",
+      "cn": "六个独立训练的语言模型在预设规则下对话的影像/互动装置，探讨 AI 与 AI 对话。",
+      "tw": "六個獨立訓練的語言模型在預設規則下對話的影像/互動裝置，探討 AI 與 AI 對話。"
+    },
+    "imageUrl": "portfolio/8/A/1.jpg",
+    "folderPath": "portfolio/8"
+  }
+]
