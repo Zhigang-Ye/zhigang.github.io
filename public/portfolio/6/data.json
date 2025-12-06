@@ -1,0 +1,43 @@
+
+{
+  "layout": "single-column",
+  "text": {
+    "en": "Deserts and dunes are constituted by sand. This establishes a structural metaphor for the image, wherein pixels and silver halide grains serve as the minimal units of visual data. Here, the materiality of reality and the materiality of the medium engage in a state of intertextuality and isomorphism. The dunes—and all that they contain—are not merely subjects to be captured and viewed, but emerge as a self-reference to the medium of imagery itself. Within this landscape, time and entropy undergo a poetic dissolution and reconstruction.",
+    "cn": "沙漠、沙丘由沙子组成。这形成一种对图像的比喻，像素、银盐粒子组成图像数据的最小单位。在这里，现实的物质性与媒介的物质性发生了互文与同构。沙丘与其中的一切不仅是拍摄与观看的对象，也成为了图像媒介本身的自指。时间与熵，在沙丘中存在一种诗意的瓦解与重构。",
+    "tw": "沙漠、沙丘由沙子组成。这形成一种对图像的比喻，像素、银盐粒子组成图像数据的最小单位。在这里，现实的物质性与媒介的物质性发生了互文与同构。沙丘与其中的一切不仅是拍摄与观看的对象，也成为了图像媒介本身的自指。时间与熵，在沙丘中存在一种诗意的瓦解与重构。"
+  },
+  "imagesA": [
+    "A/1.jpg",
+    "A/2.jpg",
+    "A/3.jpg",
+    "A/5.jpg",
+    "A/6.jpg",
+    "A/7.jpg",
+    "A/8.jpg",
+    "A/9.jpg",
+    "A/10.jpg",
+    "A/11.jpg",
+    "A/12.jpg",
+    "A/13.jpg",
+    "A/14.jpg",
+    "A/15.jpg",
+    "A/16.jpg"
+  ],
+  "imagesB": [
+    "B/1.jpg",
+    "B/2.jpg",
+    "B/3.jpg",
+    "B/5.jpg",
+    "B/6.jpg",
+    "B/7.jpg",
+    "B/8.jpg",
+    "B/9.jpg",
+    "B/10.jpg",
+    "B/11.jpg",
+    "B/12.jpg",
+    "B/13.jpg",
+    "B/14.jpg",
+    "B/15.jpg",
+    "B/16.jpg"
+  ]
+}
