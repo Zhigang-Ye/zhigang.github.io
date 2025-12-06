@@ -335,10 +335,9 @@ const Portfolio: React.FC<PortfolioProps> = ({ lang, toggleLang }) => {
       const images = detailContent.imagesA || detailContent.images || [];
       if (images.length === 0) return;
       const total = images.length;
-      const target = ((nextIdx % total) + total) % total;
+      const target = Math.max(0, Math.min(total - 1, nextIdx)); // clamp to avoid wrap jumps
       setMobileSliderIndex(target);
       setDesktopSliderIndex(target);
-      setSliderLoading(true);
   };
 
   const handleDesktopNextImage = () => changeSlide(desktopSliderIndex + 1);
@@ -485,7 +484,7 @@ const Portfolio: React.FC<PortfolioProps> = ({ lang, toggleLang }) => {
     setShowIndex(false); 
     setIsGalleryOpen(false); // Reset gallery state
     setDetailImagesReady(false);
-    setSliderLoading(true);
+    setSliderLoading(false);
     setLowResAvailable((prev) => {
       const next = { ...prev };
       if (project?.id) delete next[project.id];
