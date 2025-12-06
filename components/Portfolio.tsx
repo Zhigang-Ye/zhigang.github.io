@@ -35,6 +35,8 @@ interface GalleryRow {
 }
 
 const Portfolio: React.FC<PortfolioProps> = ({ lang, toggleLang }) => {
+  const MOBILE_SIDE_PADDING = 12; // px, keep image and nav aligned on mobile
+
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
   
@@ -1463,10 +1465,11 @@ const Portfolio: React.FC<PortfolioProps> = ({ lang, toggleLang }) => {
   const prevIndex = (displayIndex - 1 + projects.length) % projects.length;
   const nextSrc = projects[nextIndex].imageUrl;
   const prevSrc = projects[prevIndex].imageUrl;
+  const mobileImageWidth = `calc(100vw - ${MOBILE_SIDE_PADDING * 2}px)`;
 
   return (
     <div 
-        className={`fixed inset-0 ${isMobile ? 'pt-8 px-2 items-center' : 'pt-20 md:pt-24 items-center'} ${isMobile ? 'pb-4' : 'pb-4'} bg-white z-0 flex justify-center overflow-hidden touch-pan-y`}
+        className={`fixed inset-0 ${isMobile ? 'pt-8 items-center' : 'pt-20 md:pt-24 items-center'} ${isMobile ? 'pb-4' : 'pb-4'} bg-white z-0 flex justify-center overflow-hidden touch-pan-y`}
         onTouchStart={onTouchStart}
         onTouchMove={onTouchMove}
         onTouchEnd={onTouchEnd}
@@ -1474,6 +1477,7 @@ const Portfolio: React.FC<PortfolioProps> = ({ lang, toggleLang }) => {
         onMouseMove={onMouseMove}
         onMouseUp={onMouseUp}
         onMouseLeave={onMouseLeave}
+        style={isMobile ? { paddingLeft: MOBILE_SIDE_PADDING, paddingRight: MOBILE_SIDE_PADDING } : undefined}
     >
       <div className="hidden">
         <img src={nextSrc} alt="preload next" />
@@ -1503,7 +1507,7 @@ const Portfolio: React.FC<PortfolioProps> = ({ lang, toggleLang }) => {
             flex items-center justify-center 
         "
       >
-        <div className={`absolute inset-0 pointer-events-none ${isMobile ? 'px-2' : ''}`} />
+        <div className="absolute inset-0 pointer-events-none" />
         {!isMobile && (
           <button
             onClick={() => setShowTestPanel((prev) => !prev)}
@@ -1578,16 +1582,18 @@ const Portfolio: React.FC<PortfolioProps> = ({ lang, toggleLang }) => {
                 className={`
                   block h-auto object-contain select-none
                   ${isMobile 
-                    ? 'w-[96vw] max-w-[96vw] max-h-[82vh] min-w-[260px] mx-auto' 
+                    ? 'max-h-[82vh] min-w-[260px] mx-auto w-full' 
                     : 'w-auto max-h-[85vh] max-w-[85vw] min-w-[450px] mx-auto'
                   }
                 `}
+                style={isMobile ? { width: mobileImageWidth, maxWidth: mobileImageWidth } : undefined}
             />
 
             <div 
                 className={`flex flex-row justify-between items-baseline relative z-20 animate-in fade-in duration-500 gap-8 w-full 
-                  ${isMobile ? 'max-w-[96vw]' : 'max-w-[85vw] min-w-[450px]'}
+                  ${isMobile ? 'w-full' : 'max-w-[85vw] min-w-[450px]'}
                 `}
+                style={isMobile ? { maxWidth: mobileImageWidth } : undefined}
                 key={currentProject.id}
             >
                 {/* Rule: Title ALWAYS English */}

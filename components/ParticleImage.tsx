@@ -36,6 +36,7 @@ export interface ParticleImageProps {
   gap?: number;
   dotRadius?: number;
   onImageLoaded?: () => void;
+  style?: React.CSSProperties;
 }
 
 // Data cache exported for external use if needed, but mostly managed via prefetch function
@@ -146,7 +147,8 @@ const ParticleImage: React.FC<ParticleImageProps> = ({
   className, 
   gap = 6, // Default gap set to 6px for the specific dense grid look
   dotRadius = 2.8,
-  onImageLoaded
+  onImageLoaded,
+  style
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -424,6 +426,7 @@ const ParticleImage: React.FC<ParticleImageProps> = ({
         <div 
             ref={containerRef}
             className={`relative block ${className}`}
+            style={style}
         >
             <img 
                 ref={imgRef}

@@ -12,6 +12,7 @@ interface NavigationProps {
 
 const Navigation: React.FC<NavigationProps> = ({ currentView, onChangeView, lang }) => {
   const [isOpen, setIsOpen] = useState(false);
+  const MOBILE_SIDE_PADDING = 12;
 
   const handleNavClick = (view: ViewState) => {
     onChangeView(view);
@@ -37,7 +38,10 @@ const Navigation: React.FC<NavigationProps> = ({ currentView, onChangeView, lang
       </div>
 
       {/* Mobile Navigation Header */}
-      <div className="md:hidden flex items-center justify-end px-6 h-full w-full">
+      <div 
+        className="md:hidden flex items-center justify-end h-full w-full"
+        style={{ paddingLeft: MOBILE_SIDE_PADDING, paddingRight: MOBILE_SIDE_PADDING }}
+      >
         {/* Strictly no title on the left, only menu button on the right */}
         <button 
           onClick={() => setIsOpen(!isOpen)}
