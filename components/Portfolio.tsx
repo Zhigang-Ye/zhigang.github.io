@@ -48,6 +48,7 @@ const Portfolio: React.FC<PortfolioProps> = ({ lang, toggleLang }) => {
   const [imageAspectRatio, setImageAspectRatio] = useState<number | undefined>(undefined);
   const [detailImagesReady, setDetailImagesReady] = useState(false);
   const [sliderLoading, setSliderLoading] = useState(true);
+  const [lowResAvailable, setLowResAvailable] = useState<Record<string, boolean>>({});
   const [hiResLoadedMap, setHiResLoadedMap] = useState<Record<number, boolean>>({});
   const [mobileSliderIndex, setMobileSliderIndex] = useState(0);
 
@@ -493,6 +494,11 @@ const Portfolio: React.FC<PortfolioProps> = ({ lang, toggleLang }) => {
     setIsGalleryOpen(false); // Reset gallery state
     setDetailImagesReady(false);
     setSliderLoading(true);
+    setLowResAvailable((prev) => {
+      const next = { ...prev };
+      if (project?.id) delete next[project.id];
+      return next;
+    });
     setHiResLoadedMap({});
     setMobileSliderIndex(0);
     mobileSlideStartX.current = null;
@@ -1016,6 +1022,7 @@ const Portfolio: React.FC<PortfolioProps> = ({ lang, toggleLang }) => {
         const sliderImages = detailContent?.imagesA || detailContent?.images || [];
         const totalSlides = sliderImages.length;
         const currentMobileImage = sliderImages[mobileSliderIndex] || sliderImages[0] || '';
+        const allowLowRes = selectedProject?.id ? lowResAvailable[selectedProject.id] !== false : true;
         const currentLowRes = currentMobileImage ? getLowResAUrl(selectedProject, currentMobileImage) : '';
         const currentHighRes = currentMobileImage ? getFullImageUrl(currentMobileImage) : '';
         const showHiRes = hiResLoadedMap[mobileSliderIndex];
@@ -1105,7 +1112,7 @@ const Portfolio: React.FC<PortfolioProps> = ({ lang, toggleLang }) => {
                                           {currentMobileImage && (
                                             <div className="w-full h-full flex items-center justify-center">
                                               <img 
-                                                src={showHiRes ? getFullImageUrl(currentMobileImage) : getLowResAUrl(selectedProject, currentMobileImage)} 
+                                                src={showHiRes || !allowLowRes ? getFullImageUrl(currentMobileImage) : getLowResAUrl(selectedProject, currentMobileImage)} 
                                                 alt="" 
                                                 className="w-full h-full object-contain"
                                                 loading="eager"
@@ -1125,6 +1132,9 @@ const Portfolio: React.FC<PortfolioProps> = ({ lang, toggleLang }) => {
                                                 onError={(e) => {
                                                   const hi = getFullImageUrl(currentMobileImage);
                                                   if (e.currentTarget.src !== hi) {
+                                                    if (selectedProject?.id) {
+                                                      setLowResAvailable((prev) => ({ ...prev, [selectedProject.id]: false }));
+                                                    }
                                                     e.currentTarget.src = hi;
                                                     return;
                                                   }
@@ -1453,7 +1463,8 @@ const Portfolio: React.FC<PortfolioProps> = ({ lang, toggleLang }) => {
                                 const hi = getFullImageUrl(img);
                                 const low = getLowResAUrl(selectedProject, img);
                                 const showHi = hiResLoadedMap[idx];
-                                const displaySrc = showHi ? hi : low;
+                                const allowLowRes = selectedProject?.id ? lowResAvailable[selectedProject.id] !== false : true;
+                                const displaySrc = (showHi || !allowLowRes) ? hi : low;
                                 return (
                                   <div 
                                     key={idx} 
@@ -1480,6 +1491,9 @@ const Portfolio: React.FC<PortfolioProps> = ({ lang, toggleLang }) => {
                                       }}
                                       onError={(e) => {
                                         if (e.currentTarget.src !== hi) {
+                                          if (selectedProject?.id) {
+                                            setLowResAvailable((prev) => ({ ...prev, [selectedProject.id]: false }));
+                                          }
                                           e.currentTarget.src = hi;
                                           return;
                                         }
