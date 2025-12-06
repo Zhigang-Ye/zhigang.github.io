@@ -335,7 +335,8 @@ const Portfolio: React.FC<PortfolioProps> = ({ lang, toggleLang }) => {
       const images = detailContent.imagesA || detailContent.images || [];
       if (images.length === 0) return;
       const total = images.length;
-      const target = Math.max(0, Math.min(total - 1, nextIdx)); // clamp to avoid wrap jumps
+      // Wrap around so you can continue past last/first without getting stuck
+      const target = ((nextIdx % total) + total) % total;
       setMobileSliderIndex(target);
       setDesktopSliderIndex(target);
   };
