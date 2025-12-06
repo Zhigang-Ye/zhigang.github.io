@@ -573,12 +573,8 @@ const Portfolio: React.FC<PortfolioProps> = ({ lang, toggleLang }) => {
             if (!content.imagesA || content.imagesA.length === 0) {
                 content.imagesA = await discoverImages(project.folderPath, 'A');
             }
-            // Only discover B if JSON explicitly has imagesB key; otherwise skip to avoid 404 probes
-            if (content.imagesB !== undefined) {
-                if (!content.imagesB || content.imagesB.length === 0) {
-                    content.imagesB = await discoverImages(project.folderPath, 'B');
-                }
-            } else {
+            // B: only use what is explicitly provided; do not auto-discover when empty to avoid 404 spam
+            if (content.imagesB === undefined) {
                 content.imagesB = [];
             }
         }
