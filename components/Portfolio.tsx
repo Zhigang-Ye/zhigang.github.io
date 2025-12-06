@@ -47,9 +47,9 @@ const Portfolio: React.FC<PortfolioProps> = ({ lang, toggleLang }) => {
   const [detailLoading, setDetailLoading] = useState(false);
   const [imageAspectRatio, setImageAspectRatio] = useState<number | undefined>(undefined);
   const [detailImagesReady, setDetailImagesReady] = useState(false);
-  const [lowResMap, setLowResMap] = useState<Record<number, string>>({});
   const [sliderLoading, setSliderLoading] = useState(true);
-  const [minLoadingDone, setMinLoadingDone] = useState(false);
+  const [hiResLoadedMap, setHiResLoadedMap] = useState<Record<number, boolean>>({});
+  const [mobileSliderIndex, setMobileSliderIndex] = useState(0);
 
   // Index Overlay State
   const [showIndex, setShowIndex] = useState(false);
@@ -66,7 +66,8 @@ const Portfolio: React.FC<PortfolioProps> = ({ lang, toggleLang }) => {
   const [isGalleryOpen, setIsGalleryOpen] = useState(false); // Default collapsed
   const [lightboxHiResSrc, setLightboxHiResSrc] = useState<string | null>(null);
   const thumbCacheRef = useRef<Record<string, MeasuredImage[]>>({});
-  const minLoadTimerRef = useRef<number | null>(null);
+  const mobileSlideStartX = useRef<number | null>(null);
+  const mobileSlideCurrentX = useRef<number | null>(null);
 
   // Text Expansion State
   const [isTextOpen, setIsTextOpen] = useState(false); // Default collapsed
@@ -92,15 +93,6 @@ const Portfolio: React.FC<PortfolioProps> = ({ lang, toggleLang }) => {
 
   // Device Check
   const [isMobile, setIsMobile] = useState(false);
-
-  // Reset slider/loading state when switching projects
-  useEffect(() => {
-    if (selectedProject) {
-      setSliderLoading(true);
-      setDetailImagesReady(false);
-      setMinLoadingDone(false);
-    }
-  }, [selectedProject]);
 
   // Particle tweak controls (temporary UI)
   const [particleGap, setParticleGap] = useState(6);
@@ -261,6 +253,21 @@ const Portfolio: React.FC<PortfolioProps> = ({ lang, toggleLang }) => {
     return (match && match[2].length === 11) ? match[2] : null;
   };
 
+  // Build low-res paths from generated C folder
+  const getLowResAUrl = (project: Project | null, img: string) => {
+    if (!project?.folderPath) return img;
+    if (img.startsWith('http') || img.startsWith('/')) return img;
+    const base = img.split('/').pop()?.split('.').slice(0, -1).join('.') || 'image';
+    return `${project.folderPath}/C/${base}.jpg`;
+  };
+
+  const getLowResBUrl = (project: Project | null, img: string) => {
+    if (!project?.folderPath) return img;
+    if (img.startsWith('http') || img.startsWith('/')) return img;
+    const base = img.split('/').pop()?.split('.').slice(0, -1).join('.') || 'image';
+    return `${project.folderPath}/C/B/${base}.jpg`;
+  };
+
   const handleNext = () => {
     setSlideDirection('next');
     setDisplayIndex((prev) => {
@@ -285,16 +292,31 @@ const Portfolio: React.FC<PortfolioProps> = ({ lang, toggleLang }) => {
     });
   };
 
+  const scrollDesktopToIndex = (idx: number) => {
+      if (!detailContent) return;
+      const images = detailContent.imagesA || detailContent.images || [];
+      if (images.length === 0) return;
+      const nextIdx = ((idx % images.length) + images.length) % images.length;
+      setDesktopSliderIndex(nextIdx);
+      const container = imageScrollRef.current;
+      if (container && container.children[nextIdx]) {
+          const child = container.children[nextIdx] as HTMLElement;
+          child.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+      }
+  };
+
   const handleDesktopNextImage = () => {
       if (!detailContent) return;
       const images = detailContent.imagesA || detailContent.images || [];
-      setDesktopSliderIndex((prev) => (prev + 1) % images.length);
+      if (images.length === 0) return;
+      scrollDesktopToIndex(desktopSliderIndex + 1);
   };
 
   const handleDesktopPrevImage = () => {
       if (!detailContent) return;
       const images = detailContent.imagesA || detailContent.images || [];
-      setDesktopSliderIndex((prev) => (prev - 1 + images.length) % images.length);
+      if (images.length === 0) return;
+      scrollDesktopToIndex(desktopSliderIndex - 1);
   };
 
   // --- Main Page Swipe Logic ---
@@ -438,11 +460,11 @@ const Portfolio: React.FC<PortfolioProps> = ({ lang, toggleLang }) => {
     setShowIndex(false); 
     setIsGalleryOpen(false); // Reset gallery state
     setDetailImagesReady(false);
-    setLowResMap({});
     setSliderLoading(true);
-    setMinLoadingDone(false);
-    if (minLoadTimerRef.current) clearTimeout(minLoadTimerRef.current);
-    minLoadTimerRef.current = window.setTimeout(() => setMinLoadingDone(true), 3000);
+    setHiResLoadedMap({});
+    setMobileSliderIndex(0);
+    mobileSlideStartX.current = null;
+    mobileSlideCurrentX.current = null;
     // Always start closed on both desktop and mobile
     setIsTextOpen(false); 
     
@@ -521,15 +543,14 @@ const Portfolio: React.FC<PortfolioProps> = ({ lang, toggleLang }) => {
             img.onload = () => {
                 const ratio = img.naturalWidth / img.naturalHeight;
                 setImageAspectRatio(ratio);
-                setSliderLoading(false);
+                setSliderLoading(true); // will clear once low-res loads
                 setDetailImagesReady(true);
-                setMinLoadingDone(true);
+                setSliderLoading(true);
             };
             img.onerror = () => {
                 setImageAspectRatio(16/9); 
-                setSliderLoading(false);
+                setSliderLoading(true);
                 setDetailImagesReady(true);
-                setMinLoadingDone(true);
             };
         } else {
             setImageAspectRatio(16/9);
@@ -546,44 +567,23 @@ const Portfolio: React.FC<PortfolioProps> = ({ lang, toggleLang }) => {
                 setThumbDims(cached);
              } else {
                 // Immediate placeholder to render gallery alongside text
-                 const placeholderDims: MeasuredImage[] = thumbs.map((srcRaw, idx) => {
-                    const src = getFullUrl(srcRaw);
-                   return { src, fullSrc: src, ratio: 1, originalIndex: idx };
+             const placeholderDims: MeasuredImage[] = thumbs.map((srcRaw, idx) => {
+                    const src = getLowResBUrl(project, srcRaw);
+                   return { src, fullSrc: getFullUrl(srcRaw), ratio: 1, originalIndex: idx };
                 });
                 setThumbDims(placeholderDims);
 
                 const dimsPromise = thumbs.map((srcRaw, idx) => {
-                   return new Promise<MeasuredImage | null>(async (resolve) => {
-                       const src = getFullUrl(srcRaw);
-                       try {
-                           const res = await fetch(src);
-                           if (!res.ok) throw new Error('fetch failed');
-                           const blob = await res.blob();
-                           let thumbSrc = src;
-                           let ratio = 1;
-                           try {
-                               const bitmap = await createImageBitmap(blob, { resizeWidth: 600 });
-                               ratio = bitmap.width / bitmap.height || 1;
-                               const canvas = document.createElement('canvas');
-                               canvas.width = bitmap.width;
-                               canvas.height = bitmap.height;
-                               const ctx = canvas.getContext('2d');
-                               if (ctx) {
-                                   ctx.drawImage(bitmap, 0, 0, bitmap.width, bitmap.height);
-                                   thumbSrc = canvas.toDataURL('image/jpeg', 0.75);
-                               }
-                               bitmap.close();
-                           } catch {
-                               const img = new Image();
-                               img.src = src;
-                               await img.decode();
-                               ratio = img.naturalWidth / img.naturalHeight || 1;
-                           }
-                           resolve({ src: thumbSrc, fullSrc: src, ratio, originalIndex: idx });
-                       } catch (e) {
-                           resolve(null);
-                       }
-                   });
+                  return new Promise<MeasuredImage | null>((resolve) => {
+                    const src = getFullUrl(srcRaw);
+                    const img = new Image();
+                    img.src = src;
+                    img.onload = () => {
+                      const ratio = img.naturalWidth && img.naturalHeight ? (img.naturalWidth / img.naturalHeight) : 1;
+                      resolve({ src: getLowResBUrl(project, srcRaw), fullSrc: src, ratio, originalIndex: idx });
+                    };
+                    img.onerror = () => resolve(null);
+                  });
                 });
                 Promise.all(dimsPromise).then(loadedDims => {
                     const finalDims = loadedDims.filter((d): d is MeasuredImage => Boolean(d));
@@ -594,36 +594,6 @@ const Portfolio: React.FC<PortfolioProps> = ({ lang, toggleLang }) => {
         }
 
         setDetailContent(content);
-        // Prepare low-res placeholders for imagesA
-        const sliderImagesLow = content.imagesA || content.images || [];
-        if (project.folderPath && sliderImagesLow.length > 0) {
-            const createLowRes = async () => {
-                const map: Record<number, string> = {};
-                for (let i = 0; i < sliderImagesLow.length; i++) {
-                    const imgPath = sliderImagesLow[i];
-                    const full = getFullUrl(imgPath);
-                    try {
-                        const res = await fetch(full);
-                        if (!res.ok) continue;
-                        const blob = await res.blob();
-                        const bitmap = await createImageBitmap(blob, { resizeWidth: 1080 });
-                        const canvas = document.createElement('canvas');
-                        canvas.width = bitmap.width;
-                        canvas.height = bitmap.height;
-                        const ctx = canvas.getContext('2d');
-                        if (ctx) {
-                            ctx.drawImage(bitmap, 0, 0, bitmap.width, bitmap.height);
-                            map[i] = canvas.toDataURL('image/jpeg', 0.7);
-                        }
-                        bitmap.close();
-                    } catch (e) {
-                        // ignore
-                    }
-                }
-                setLowResMap(map);
-            };
-            createLowRes();
-        }
     } catch (e) {
         console.warn("Could not load detail data, using fallback", e);
         setDetailContent({
@@ -1011,6 +981,12 @@ const Portfolio: React.FC<PortfolioProps> = ({ lang, toggleLang }) => {
     if (isMobile) {
         // Logic to hide bottom controls if top controls are visible
         const showBottomControls = isAtBottom && !isAtTop;
+        const sliderImages = detailContent?.imagesA || detailContent?.images || [];
+        const totalSlides = sliderImages.length;
+        const currentMobileImage = sliderImages[mobileSliderIndex] || sliderImages[0] || '';
+        const currentLowRes = currentMobileImage ? getLowResAUrl(selectedProject, currentMobileImage) : '';
+        const currentHighRes = currentMobileImage ? getFullImageUrl(currentMobileImage) : '';
+        const showHiRes = hiResLoadedMap[mobileSliderIndex];
 
         return (
             <div 
@@ -1079,42 +1055,53 @@ const Portfolio: React.FC<PortfolioProps> = ({ lang, toggleLang }) => {
                         <>
                              {/* Content Wrapper */}
                              <div className="w-full max-w-4xl flex flex-col px-6">
-                                 {/* 1. Slider */}
+                                 {/* 1. Slider (mobile virtualized with low-res first) */}
                                  {sliderImages.length > 0 && (
                                      <div className="relative mb-2 w-full group">
                                         <div 
                                             style={{ aspectRatio: imageAspectRatio ? imageAspectRatio : 'auto' }}
                                             className={`w-full relative bg-white ${!imageAspectRatio ? 'min-h-[50vh]' : ''}`}
+                                            onTouchStart={(e) => handleMobileSlideStart(e.touches[0].clientX)}
+                                            onTouchMove={(e) => handleMobileSlideMove(e.touches[0].clientX)}
+                                            onTouchEnd={handleMobileSlideEnd}
                                         >
-                                          {(sliderLoading || !minLoadingDone) ? (
+                                          {sliderLoading && (
                                             <div className="absolute inset-0 flex items-center justify-center text-[#F22C2C] text-sm bg-white" style={{ fontFamily: '"Doto", sans-serif' }}>
                                               Loading...
                                             </div>
-                                          ) : null}
-                                          {(!sliderLoading && minLoadingDone) && (
-                                            <div 
-                                              className="flex overflow-x-auto snap-x snap-mandatory scrollbar-hide scroll-smooth w-full h-full gap-4"
-                                              style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
-                                            >
-                                              {sliderImages.map((img, idx) => {
-                                                  const src = getFullImageUrl(img);
-                                                  return (
-                                                      <div key={idx} className="w-full h-full flex-shrink-0 snap-center flex items-center justify-center bg-white">
-                                                        <img 
-                                                          src={src} 
-                                                          alt="" 
-                                                          className="w-full h-full object-contain"
-                                                          loading={idx === 0 ? 'eager' : 'lazy'}
-                                                          decoding="async"
-                                                          onLoad={() => {
-                                                            if (idx === 0) {
-                                                              setSliderLoading(false);
-                                                            }
-                                                          }}
-                                                        />
-                                                      </div>
-                                                  );
-                                              })}
+                                          )}
+                                          {currentMobileImage && (
+                                            <div className="w-full h-full flex items-center justify-center">
+                                              <img 
+                                                src={showHiRes ? getFullImageUrl(currentMobileImage) : getLowResAUrl(selectedProject, currentMobileImage)} 
+                                                alt="" 
+                                                className="w-full h-full object-contain"
+                                                loading="eager"
+                                                decoding="async"
+                                                onLoad={(e) => {
+                                                  const isHi = e.currentTarget.src === getFullImageUrl(currentMobileImage);
+                                                  if (!isHi) {
+                                                    setSliderLoading(false);
+                                                    const hi = new Image();
+                                                    hi.src = getFullImageUrl(currentMobileImage);
+                                                    hi.onload = () => setHiResLoadedMap((prev) => ({ ...prev, [mobileSliderIndex]: true }));
+                                                  } else {
+                                                    setSliderLoading(false);
+                                                    setHiResLoadedMap((prev) => ({ ...prev, [mobileSliderIndex]: true }));
+                                                  }
+                                                }}
+                                              />
+                                            </div>
+                                          )}
+                                          {sliderImages.length > 1 && !sliderLoading && (
+                                            <div className="absolute inset-y-0 left-0 right-0 flex items-center justify-between px-2 text-[#F22C2C] text-xl font-light pointer-events-none">
+                                              <span className="pointer-events-auto px-2" onClick={() => { setSliderLoading(true); setMobileSliderIndex((prev) => (prev - 1 + totalSlides) % totalSlides); }}>&lt;</span>
+                                              <span className="pointer-events-auto px-2" onClick={() => { setSliderLoading(true); setMobileSliderIndex((prev) => (prev + 1) % totalSlides); }}>&gt;</span>
+                                            </div>
+                                          )}
+                                          {sliderImages.length > 1 && (
+                                            <div className="absolute bottom-2 left-0 right-0 text-center text-[10px] text-[#F22C2C]" style={{ fontFamily: '"Doto", sans-serif' }}>
+                                              {mobileSliderIndex + 1} / {totalSlides}
                                             </div>
                                           )}
                                         </div>
@@ -1408,45 +1395,72 @@ const Portfolio: React.FC<PortfolioProps> = ({ lang, toggleLang }) => {
                         </div>
                     </div>
                 ) : (
-                    /* SINGLE IMAGE (Auto Width, Centered) */
+                    /* HORIZONTAL STRIP (Desktop scroll like mobile) */
                     sliderImages.length > 0 && (
-                        <div className="relative h-full w-auto flex justify-center group/image">
-                             <img 
-                                src={getFullImageUrl(sliderImages[desktopSliderIndex])} 
-                                alt="" 
-                                className="h-full w-auto object-contain select-none block max-w-full"
-                                draggable={false}
-                                loading="lazy"
-                                decoding="async"
-                            />
-                            
-                            {/* Left Click Zone */}
+                        <div className="relative h-full w-full flex justify-center items-center group/image">
+                            {sliderLoading && (
+                              <div className="absolute inset-0 flex items-center justify-center text-[#F22C2C] text-sm bg-white/80 z-20" style={{ fontFamily: '"Doto", sans-serif' }}>
+                                Loading...
+                              </div>
+                            )}
                             <div 
-                                className="absolute left-0 top-0 w-1/2 h-full cursor-pointer z-10 group/left"
-                                onClick={handleDesktopPrevImage}
-                            />
-                            
-                            {/* Right Click Zone */}
-                            <div 
-                                className="absolute right-0 top-0 w-1/2 h-full cursor-pointer z-10 group/right"
-                                onClick={handleDesktopNextImage}
-                            />
-
-                            {/* Left Arrow Feedback */}
-                            <div 
-                                className="absolute left-4 top-1/2 -translate-y-1/2 text-[#F22C2C] text-4xl font-light opacity-0 group-hover/left:opacity-100 transition-opacity pointer-events-none z-20"
-                                style={{ fontFamily: '"Doto", sans-serif' }}
+                              ref={imageScrollRef}
+                              className="flex h-full w-full max-w-[85vw] max-h-[85vh] overflow-x-auto snap-x snap-mandatory gap-4 px-6 scrollbar-hide"
+                              style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
                             >
-                                &lt;
+                              {sliderImages.map((img, idx) => {
+                                const hi = getFullImageUrl(img);
+                                const low = getLowResAUrl(selectedProject, img);
+                                const showHi = hiResLoadedMap[idx];
+                                const displaySrc = showHi ? hi : low;
+                                return (
+                                  <div 
+                                    key={idx} 
+                                    className="flex-shrink-0 w-full h-full flex items-center justify-center snap-center bg-white"
+                                    style={{ minWidth: '65vw' }}
+                                  >
+                                    <img 
+                                      src={displaySrc} 
+                                      alt="" 
+                                      className="max-h-[85vh] max-w-full object-contain select-none block"
+                                      draggable={false}
+                                      loading={idx === 0 ? 'eager' : 'lazy'}
+                                      decoding="async"
+                                      onLoad={() => {
+                                        if (!showHi) {
+                                          setSliderLoading(false);
+                                          const pre = new Image();
+                                          pre.src = hi;
+                                          pre.onload = () => setHiResLoadedMap((prev) => ({ ...prev, [idx]: true }));
+                                        } else {
+                                          setSliderLoading(false);
+                                          setHiResLoadedMap((prev) => ({ ...prev, [idx]: true }));
+                                        }
+                                      }}
+                                    />
+                                  </div>
+                                );
+                              })}
                             </div>
 
-                            {/* Right Arrow Feedback */}
-                            <div 
-                                className="absolute right-4 top-1/2 -translate-y-1/2 text-[#F22C2C] text-4xl font-light opacity-0 group-hover/right:opacity-100 transition-opacity pointer-events-none z-20"
-                                style={{ fontFamily: '"Doto", sans-serif' }}
-                            >
-                                &gt;
-                            </div>
+                            {sliderImages.length > 1 && (
+                              <>
+                                <button 
+                                  onClick={handleDesktopPrevImage}
+                                  className="absolute left-2 top-1/2 -translate-y-1/2 p-3 text-[#F22C2C] hover:opacity-70 transition-opacity z-30 text-3xl font-light select-none bg-white/70 backdrop-blur rounded-full"
+                                  style={{ fontFamily: '"Doto", sans-serif' }}
+                                >
+                                  &lt;
+                                </button>
+                                <button 
+                                  onClick={handleDesktopNextImage}
+                                  className="absolute right-2 top-1/2 -translate-y-1/2 p-3 text-[#F22C2C] hover:opacity-70 transition-opacity z-30 text-3xl font-light select-none bg-white/70 backdrop-blur rounded-full"
+                                  style={{ fontFamily: '"Doto", sans-serif' }}
+                                >
+                                  &gt;
+                                </button>
+                              </>
+                            )}
                         </div>
                     )
                 )}
