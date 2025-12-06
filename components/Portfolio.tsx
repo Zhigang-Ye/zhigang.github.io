@@ -253,6 +253,38 @@ const Portfolio: React.FC<PortfolioProps> = ({ lang, toggleLang }) => {
     return (match && match[2].length === 11) ? match[2] : null;
   };
 
+  // --- Mobile slide helpers (low-res -> hi-res) ---
+  const handleMobileSlideStart = (x: number) => {
+    mobileSlideStartX.current = x;
+    mobileSlideCurrentX.current = x;
+  };
+
+  const handleMobileSlideMove = (x: number) => {
+    if (mobileSlideStartX.current === null) return;
+    mobileSlideCurrentX.current = x;
+  };
+
+  const handleMobileSlideEnd = () => {
+    if (mobileSlideStartX.current === null || mobileSlideCurrentX.current === null) {
+      mobileSlideStartX.current = null;
+      mobileSlideCurrentX.current = null;
+      return;
+    }
+    const delta = mobileSlideCurrentX.current - mobileSlideStartX.current;
+    const threshold = 40;
+    const sliderImages = detailContent?.imagesA || detailContent?.images || [];
+    const totalSlides = sliderImages.length;
+    if (delta > threshold && totalSlides > 1) {
+      setSliderLoading(true);
+      setMobileSliderIndex((prev) => (prev - 1 + totalSlides) % totalSlides);
+    } else if (delta < -threshold && totalSlides > 1) {
+      setSliderLoading(true);
+      setMobileSliderIndex((prev) => (prev + 1) % totalSlides);
+    }
+    mobileSlideStartX.current = null;
+    mobileSlideCurrentX.current = null;
+  };
+
   // Build low-res paths from generated C folder
   const getLowResAUrl = (project: Project | null, img: string) => {
     if (!project?.folderPath) return img;
