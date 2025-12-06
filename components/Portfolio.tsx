@@ -50,8 +50,7 @@ const Portfolio: React.FC<PortfolioProps> = ({ lang, toggleLang }) => {
   const [sliderLoading, setSliderLoading] = useState(true);
   const [lowResAvailable, setLowResAvailable] = useState<Record<string, boolean>>({});
   const [hiResLoadedMap, setHiResLoadedMap] = useState<Record<number, boolean>>({});
-  const [mobileSliderIndex, setMobileSliderIndex] = useState(0);
-  const [desktopSliderIndex, setDesktopSliderIndex] = useState(0);
+  const [sliderIndex, setSliderIndex] = useState(0);
 
   // Index Overlay State
   const [showIndex, setShowIndex] = useState(false);
@@ -333,14 +332,12 @@ const Portfolio: React.FC<PortfolioProps> = ({ lang, toggleLang }) => {
       const images = detailContent.imagesA || detailContent.images || [];
       if (images.length === 0) return;
       const total = images.length;
-      // Wrap around so you can continue past last/first without getting stuck
       const target = ((nextIdx % total) + total) % total;
-      setMobileSliderIndex(target);
-      setDesktopSliderIndex(target);
+      setSliderIndex(target);
   };
 
-  const handleDesktopNextImage = () => changeSlide(desktopSliderIndex + 1);
-  const handleDesktopPrevImage = () => changeSlide(desktopSliderIndex - 1);
+  const handleDesktopNextImage = () => changeSlide(sliderIndex + 1);
+  const handleDesktopPrevImage = () => changeSlide(sliderIndex - 1);
 
   // --- Main Page Swipe Logic ---
   const handleSwipeStart = (clientX: number) => {
@@ -490,14 +487,13 @@ const Portfolio: React.FC<PortfolioProps> = ({ lang, toggleLang }) => {
       return next;
     });
     setHiResLoadedMap({});
-    setMobileSliderIndex(0);
+    setSliderIndex(0);
     mobileSlideStartX.current = null;
     mobileSlideCurrentX.current = null;
     // Always start closed on both desktop and mobile
     setIsTextOpen(false); 
     
     setLightboxIndex(null);
-    setDesktopSliderIndex(0); // Reset desktop slider
 
     const discoverImages = async (folderPath: string, sub: 'A' | 'B', maxScan: number = 30) => {
         const exts = ['jpg', 'jpeg', 'png', 'webp'];
@@ -668,13 +664,13 @@ const Portfolio: React.FC<PortfolioProps> = ({ lang, toggleLang }) => {
     if (!detailContent) return;
     const images = detailContent.imagesA || detailContent.images || [];
     if (images.length === 0) return;
-    const targetIdx = isMobile ? mobileSliderIndex : desktopSliderIndex;
+    const targetIdx = sliderIndex;
     const container = imageScrollRef.current;
     if (!container || !container.children[targetIdx]) return;
     const child = container.children[targetIdx] as HTMLElement;
     const targetLeft = child.offsetLeft - (container.clientWidth - child.clientWidth) / 2;
     container.scrollTo({ left: targetLeft, behavior: 'smooth' });
-  }, [mobileSliderIndex, desktopSliderIndex, detailContent, isMobile]);
+  }, [sliderIndex, detailContent]);
 
   // Keyboard navigation for desktop detail view
   useEffect(() => {
@@ -1099,11 +1095,7 @@ const Portfolio: React.FC<PortfolioProps> = ({ lang, toggleLang }) => {
                                             style={{ aspectRatio: imageAspectRatio ? imageAspectRatio : 'auto' }}
                                             className={`w-full relative bg-white ${!imageAspectRatio ? 'min-h-[50vh]' : ''}`}
                                         >
-                                          {sliderLoading && (
-                                            <div className="absolute inset-0 flex items-center justify-center text-[#F22C2C] text-sm bg-white" style={{ fontFamily: '"Doto", sans-serif' }}>
-                                              Loading...
-                                            </div>
-                                          )}
+                                          {/* Loading overlay removed for smoother swipe */}
                                           <div 
                                             ref={imageScrollRef}
                                             className="flex overflow-x-auto snap-x snap-mandatory scrollbar-hide scroll-smooth w-full h-full gap-4"
@@ -1157,9 +1149,9 @@ const Portfolio: React.FC<PortfolioProps> = ({ lang, toggleLang }) => {
                                                 );
                                             })}
                                           </div>
-                                          {sliderImages.length > 1 && (
+                                            {sliderImages.length > 1 && (
                                             <div className="absolute bottom-2 left-0 right-0 text-center text-[10px] text-[#F22C2C]" style={{ fontFamily: '"Doto", sans-serif' }}>
-                                              {mobileSliderIndex + 1} / {totalSlides}
+                                              {sliderIndex + 1} / {totalSlides}
                                             </div>
                                           )}
                                         </div>
@@ -1465,11 +1457,6 @@ const Portfolio: React.FC<PortfolioProps> = ({ lang, toggleLang }) => {
                           onTouchMove={(e) => handleMobileSlideMove(e.touches[0].clientX)}
                           onTouchEnd={handleMobileSlideEnd}
                         >
-                            {sliderLoading && (
-                              <div className="absolute inset-0 flex items-center justify-center text-[#F22C2C] text-sm bg-white/80 z-20" style={{ fontFamily: '"Doto", sans-serif' }}>
-                                Loading...
-                              </div>
-                            )}
                             <div 
                               ref={imageScrollRef}
                               className="flex h-full w-full max-w-[85vw] max-h-[85vh] overflow-x-auto snap-x snap-mandatory gap-4 px-6 scrollbar-hide"
