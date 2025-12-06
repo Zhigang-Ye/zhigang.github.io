@@ -37,6 +37,8 @@ export interface ParticleImageProps {
   dotRadius?: number;
   onImageLoaded?: () => void;
   style?: React.CSSProperties;
+  slideDirection?: 'next' | 'prev' | null;
+  colorBoost?: { mult: number; gamma: number };
 }
 
 // Data cache exported for external use if needed, but mostly managed via prefetch function
@@ -59,7 +61,8 @@ const sampleCache: Record<string, SampledData> = {};
 export const prefetchParticleImage = (
   src: string, 
   targetDisplayWidth: number, 
-  gap: number = 6
+  gap: number = 6,
+  _colorBoost?: { mult: number; gamma: number }
 ): Promise<SampledData> => {
   return new Promise((resolve) => {
     // Create a cache key that includes the target width to distinguish between sizes
