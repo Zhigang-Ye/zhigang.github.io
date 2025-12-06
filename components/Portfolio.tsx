@@ -51,6 +51,7 @@ const Portfolio: React.FC<PortfolioProps> = ({ lang, toggleLang }) => {
   const [lowResAvailable, setLowResAvailable] = useState<Record<string, boolean>>({});
   const [hiResLoadedMap, setHiResLoadedMap] = useState<Record<number, boolean>>({});
   const [mobileSliderIndex, setMobileSliderIndex] = useState(0);
+  const [desktopSliderIndex, setDesktopSliderIndex] = useState(0);
 
   // Index Overlay State
   const [showIndex, setShowIndex] = useState(false);
@@ -89,9 +90,6 @@ const Portfolio: React.FC<PortfolioProps> = ({ lang, toggleLang }) => {
   const isDraggingRef = useRef(false);
 
   const imageScrollRef = useRef<HTMLDivElement>(null);
-
-  // Desktop State
-  const [desktopSliderIndex, setDesktopSliderIndex] = useState(0);
 
   // Device Check
   const [isMobile, setIsMobile] = useState(false);
@@ -332,32 +330,19 @@ const Portfolio: React.FC<PortfolioProps> = ({ lang, toggleLang }) => {
     });
   };
 
-  const scrollDesktopToIndex = (idx: number) => {
+  const changeSlide = (nextIdx: number) => {
       if (!detailContent) return;
       const images = detailContent.imagesA || detailContent.images || [];
       if (images.length === 0) return;
-      const nextIdx = ((idx % images.length) + images.length) % images.length;
-      setDesktopSliderIndex(nextIdx);
-      const container = imageScrollRef.current;
-      if (container && container.children[nextIdx]) {
-          const child = container.children[nextIdx] as HTMLElement;
-          child.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
-      }
+      const total = images.length;
+      const target = ((nextIdx % total) + total) % total;
+      setMobileSliderIndex(target);
+      setDesktopSliderIndex(target);
+      setSliderLoading(true);
   };
 
-  const handleDesktopNextImage = () => {
-      if (!detailContent) return;
-      const images = detailContent.imagesA || detailContent.images || [];
-      if (images.length === 0) return;
-      scrollDesktopToIndex(desktopSliderIndex + 1);
-  };
-
-  const handleDesktopPrevImage = () => {
-      if (!detailContent) return;
-      const images = detailContent.imagesA || detailContent.images || [];
-      if (images.length === 0) return;
-      scrollDesktopToIndex(desktopSliderIndex - 1);
-  };
+  const handleDesktopNextImage = () => changeSlide(desktopSliderIndex + 1);
+  const handleDesktopPrevImage = () => changeSlide(desktopSliderIndex - 1);
 
   // --- Main Page Swipe Logic ---
   const handleSwipeStart = (clientX: number) => {
@@ -680,6 +665,19 @@ const Portfolio: React.FC<PortfolioProps> = ({ lang, toggleLang }) => {
     const distanceToBottom = scrollHeight - scrollTop - clientHeight;
     setIsAtBottom(distanceToBottom < 20);
   }, []);
+
+  // Keep horizontal scroll in sync with current index (mobile & desktop)
+  useEffect(() => {
+    if (!detailContent) return;
+    const images = detailContent.imagesA || detailContent.images || [];
+    if (images.length === 0) return;
+    const targetIdx = isMobile ? mobileSliderIndex : desktopSliderIndex;
+    const container = imageScrollRef.current;
+    if (!container || !container.children[targetIdx]) return;
+    const child = container.children[targetIdx] as HTMLElement;
+    const targetLeft = child.offsetLeft - (container.clientWidth - child.clientWidth) / 2;
+    container.scrollTo({ left: targetLeft, behavior: 'smooth' });
+  }, [mobileSliderIndex, desktopSliderIndex, detailContent, isMobile]);
 
   // Keyboard navigation for desktop detail view
   useEffect(() => {
@@ -1029,11 +1027,6 @@ const Portfolio: React.FC<PortfolioProps> = ({ lang, toggleLang }) => {
         const showBottomControls = isAtBottom && !isAtTop;
         const sliderImages = detailContent?.imagesA || detailContent?.images || [];
         const totalSlides = sliderImages.length;
-        const currentMobileImage = sliderImages[mobileSliderIndex] || sliderImages[0] || '';
-        const allowLowRes = selectedProject?.id ? lowResAvailable[selectedProject.id] !== false : true;
-        const currentLowRes = currentMobileImage ? getLowResAUrl(selectedProject, currentMobileImage) : '';
-        const currentHighRes = currentMobileImage ? getFullImageUrl(currentMobileImage) : '';
-        const showHiRes = hiResLoadedMap[mobileSliderIndex];
 
         return (
             <div 
@@ -1102,12 +1095,22 @@ const Portfolio: React.FC<PortfolioProps> = ({ lang, toggleLang }) => {
                         <>
                              {/* Content Wrapper */}
                              <div className="w-full max-w-4xl flex flex-col px-6">
-                                 {/* 1. Slider (mobile virtualized with low-res first) */}
+                                 {/* 1. Slider (shared horizontal strip) */}
                                  {sliderImages.length > 0 && (
                                      <div className="relative mb-2 w-full group">
                                         <div 
                                             style={{ aspectRatio: imageAspectRatio ? imageAspectRatio : 'auto' }}
                                             className={`w-full relative bg-white ${!imageAspectRatio ? 'min-h-[50vh]' : ''}`}
+                                        >
+                                          {sliderLoading && (
+                                            <div className="absolute inset-0 flex items-center justify-center text-[#F22C2C] text-sm bg-white" style={{ fontFamily: '"Doto", sans-serif' }}>
+                                              Loading...
+                                            </div>
+                                          )}
+                                          <div 
+                                            ref={imageScrollRef}
+                                            className="flex overflow-x-auto snap-x snap-mandatory scrollbar-hide scroll-smooth w-full h-full gap-4"
+                                            style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
                                             onTouchStart={(e) => handleMobileSlideStart(e.touches[0].clientX)}
                                             onTouchMove={(e) => handleMobileSlideMove(e.touches[0].clientX)}
                                             onTouchEnd={handleMobileSlideEnd}
@@ -1115,47 +1118,48 @@ const Portfolio: React.FC<PortfolioProps> = ({ lang, toggleLang }) => {
                                             onMouseMove={(e) => { if (e.buttons === 1) handleMobileSlideMove(e.clientX); }}
                                             onMouseUp={handleMobileSlideEnd}
                                             onMouseLeave={() => { if (mobileSlideStartX.current !== null) handleMobileSlideEnd(); }}
-                                        >
-                                          {sliderLoading && (
-                                            <div className="absolute inset-0 flex items-center justify-center text-[#F22C2C] text-sm bg-white" style={{ fontFamily: '"Doto", sans-serif' }}>
-                                              Loading...
-                                            </div>
-                                          )}
-                                          {currentMobileImage && (
-                                            <div className="w-full h-full flex items-center justify-center">
-                                              <img 
-                                                src={showHiRes || !allowLowRes ? getFullImageUrl(currentMobileImage) : getLowResAUrl(selectedProject, currentMobileImage)} 
-                                                alt="" 
-                                                className="w-full h-full object-contain"
-                                                loading="eager"
-                                                decoding="async"
-                                                onLoad={(e) => {
-                                                  const isHi = e.currentTarget.src === getFullImageUrl(currentMobileImage);
-                                                  if (!isHi) {
-                                                    setSliderLoading(false);
-                                                    const hi = new Image();
-                                                    hi.src = getFullImageUrl(currentMobileImage);
-                                                    hi.onload = () => setHiResLoadedMap((prev) => ({ ...prev, [mobileSliderIndex]: true }));
-                                                  } else {
-                                                    setSliderLoading(false);
-                                                    setHiResLoadedMap((prev) => ({ ...prev, [mobileSliderIndex]: true }));
-                                                  }
-                                                }}
-                                                onError={(e) => {
-                                                  const hi = getFullImageUrl(currentMobileImage);
-                                                  if (e.currentTarget.src !== hi) {
-                                                    if (selectedProject?.id) {
-                                                      setLowResAvailable((prev) => ({ ...prev, [selectedProject.id]: false }));
-                                                    }
-                                                    e.currentTarget.src = hi;
-                                                    return;
-                                                  }
-                                                  setSliderLoading(false);
-                                                  setHiResLoadedMap((prev) => ({ ...prev, [mobileSliderIndex]: true }));
-                                                }}
-                                              />
-                                            </div>
-                                          )}
+                                          >
+                                            {sliderImages.map((img, idx) => {
+                                                const hi = getFullImageUrl(img);
+                                                const low = getLowResAUrl(selectedProject, img);
+                                                const showHi = hiResLoadedMap[idx];
+                                                const allowLow = selectedProject?.id ? lowResAvailable[selectedProject.id] !== false : true;
+                                                const displaySrc = (showHi || !allowLow) ? hi : low;
+                                                return (
+                                                    <div key={idx} className="w-full h-full flex-shrink-0 snap-center flex items-center justify-center bg-white" style={{ minWidth: '85vw' }}>
+                                                        <img 
+                                                          src={displaySrc} 
+                                                          alt="" 
+                                                          className="w-full h-full object-contain"
+                                                          loading={idx === 0 ? 'eager' : 'lazy'}
+                                                          decoding="async"
+                                                          onLoad={() => {
+                                                            if (!showHi) {
+                                                              setSliderLoading(false);
+                                                              const pre = new Image();
+                                                              pre.src = hi;
+                                                              pre.onload = () => setHiResLoadedMap((prev) => ({ ...prev, [idx]: true }));
+                                                            } else {
+                                                              setSliderLoading(false);
+                                                              setHiResLoadedMap((prev) => ({ ...prev, [idx]: true }));
+                                                            }
+                                                          }}
+                                                          onError={(e) => {
+                                                            if (e.currentTarget.src !== hi) {
+                                                              if (selectedProject?.id) {
+                                                                setLowResAvailable((prev) => ({ ...prev, [selectedProject.id]: false }));
+                                                              }
+                                                              e.currentTarget.src = hi;
+                                                              return;
+                                                            }
+                                                            setSliderLoading(false);
+                                                            setHiResLoadedMap((prev) => ({ ...prev, [idx]: true }));
+                                                          }}
+                                                        />
+                                                      </div>
+                                                );
+                                            })}
+                                          </div>
                                           {sliderImages.length > 1 && (
                                             <div className="absolute bottom-2 left-0 right-0 text-center text-[10px] text-[#F22C2C]" style={{ fontFamily: '"Doto", sans-serif' }}>
                                               {mobileSliderIndex + 1} / {totalSlides}
