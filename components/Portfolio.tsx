@@ -1115,6 +1115,10 @@ const Portfolio: React.FC<PortfolioProps> = ({ lang, toggleLang }) => {
                                             onTouchStart={(e) => handleMobileSlideStart(e.touches[0].clientX)}
                                             onTouchMove={(e) => handleMobileSlideMove(e.touches[0].clientX)}
                                             onTouchEnd={handleMobileSlideEnd}
+                                            onMouseDown={(e) => handleMobileSlideStart(e.clientX)}
+                                            onMouseMove={(e) => { if (e.buttons === 1) handleMobileSlideMove(e.clientX); }}
+                                            onMouseUp={handleMobileSlideEnd}
+                                            onMouseLeave={() => { if (mobileSlideStartX.current !== null) handleMobileSlideEnd(); }}
                                         >
                                           {sliderLoading && (
                                             <div className="absolute inset-0 flex items-center justify-center text-[#F22C2C] text-sm bg-white" style={{ fontFamily: '"Doto", sans-serif' }}>
@@ -1154,12 +1158,6 @@ const Portfolio: React.FC<PortfolioProps> = ({ lang, toggleLang }) => {
                                                   setHiResLoadedMap((prev) => ({ ...prev, [mobileSliderIndex]: true }));
                                                 }}
                                               />
-                                            </div>
-                                          )}
-                                          {sliderImages.length > 1 && !sliderLoading && (
-                                            <div className="absolute inset-y-0 left-0 right-0 flex items-center justify-between px-2 text-[#F22C2C] text-xl font-light pointer-events-none">
-                                              <span className="pointer-events-auto px-2" onClick={() => { setSliderLoading(true); setMobileSliderIndex((prev) => (prev - 1 + totalSlides) % totalSlides); }}>&lt;</span>
-                                              <span className="pointer-events-auto px-2" onClick={() => { setSliderLoading(true); setMobileSliderIndex((prev) => (prev + 1) % totalSlides); }}>&gt;</span>
                                             </div>
                                           )}
                                           {sliderImages.length > 1 && (
@@ -1460,7 +1458,16 @@ const Portfolio: React.FC<PortfolioProps> = ({ lang, toggleLang }) => {
                 ) : (
                     /* HORIZONTAL STRIP (Desktop scroll like mobile) */
                     sliderImages.length > 0 && (
-                        <div className="relative h-full w-full flex justify-center items-center group/image">
+                        <div 
+                          className="relative h-full w-full flex justify-center items-center group/image"
+                          onMouseDown={(e) => handleMobileSlideStart(e.clientX)}
+                          onMouseMove={(e) => { if (e.buttons === 1) handleMobileSlideMove(e.clientX); }}
+                          onMouseUp={handleMobileSlideEnd}
+                          onMouseLeave={() => { if (mobileSlideStartX.current !== null) handleMobileSlideEnd(); }}
+                          onTouchStart={(e) => handleMobileSlideStart(e.touches[0].clientX)}
+                          onTouchMove={(e) => handleMobileSlideMove(e.touches[0].clientX)}
+                          onTouchEnd={handleMobileSlideEnd}
+                        >
                             {sliderLoading && (
                               <div className="absolute inset-0 flex items-center justify-center text-[#F22C2C] text-sm bg-white/80 z-20" style={{ fontFamily: '"Doto", sans-serif' }}>
                                 Loading...
@@ -1517,25 +1524,6 @@ const Portfolio: React.FC<PortfolioProps> = ({ lang, toggleLang }) => {
                                 );
                               })}
                             </div>
-
-                            {sliderImages.length > 1 && (
-                              <>
-                                <button 
-                                  onClick={handleDesktopPrevImage}
-                                  className="absolute left-2 top-1/2 -translate-y-1/2 p-3 text-[#F22C2C] hover:opacity-70 transition-opacity z-30 text-3xl font-light select-none bg-white/70 backdrop-blur rounded-full"
-                                  style={{ fontFamily: '"Doto", sans-serif' }}
-                                >
-                                  &lt;
-                                </button>
-                                <button 
-                                  onClick={handleDesktopNextImage}
-                                  className="absolute right-2 top-1/2 -translate-y-1/2 p-3 text-[#F22C2C] hover:opacity-70 transition-opacity z-30 text-3xl font-light select-none bg-white/70 backdrop-blur rounded-full"
-                                  style={{ fontFamily: '"Doto", sans-serif' }}
-                                >
-                                  &gt;
-                                </button>
-                              </>
-                            )}
                         </div>
                     )
                 )}
