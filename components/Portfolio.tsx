@@ -280,9 +280,9 @@ const Portfolio: React.FC<PortfolioProps> = ({ lang, toggleLang }) => {
     const sliderImages = detailContent?.imagesA || detailContent?.images || [];
     const totalSlides = sliderImages.length;
     if (delta > threshold && totalSlides > 1) {
-      setMobileSliderIndex((prev) => (prev - 1 + totalSlides) % totalSlides);
+      setSliderIndex((prev) => (prev - 1 + totalSlides) % totalSlides);
     } else if (delta < -threshold && totalSlides > 1) {
-      setMobileSliderIndex((prev) => (prev + 1) % totalSlides);
+      setSliderIndex((prev) => (prev + 1) % totalSlides);
     }
     mobileSlideStartX.current = null;
     mobileSlideCurrentX.current = null;
