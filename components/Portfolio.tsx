@@ -67,6 +67,7 @@ const Portfolio: React.FC<PortfolioProps> = ({ lang, toggleLang }) => {
   const [isGalleryOpen, setIsGalleryOpen] = useState(false); // Default collapsed
   const [lightboxHiResSrc, setLightboxHiResSrc] = useState<string | null>(null);
   const thumbCacheRef = useRef<Record<string, MeasuredImage[]>>({});
+  const fpDiscoveryCacheRef = useRef<Record<string, string[]>>({});
   const mobileSlideStartX = useRef<number | null>(null);
   const mobileSlideCurrentX = useRef<number | null>(null);
 
@@ -129,7 +130,7 @@ const Portfolio: React.FC<PortfolioProps> = ({ lang, toggleLang }) => {
   }, [displayIndex, slideDirection]);
 
   // Discover FP images named 1.jpg, 2.jpg... inside each project folder (stop at first non-image)
-  const discoverFPImages = useCallback(async (folderPath: string, maxScan: number = 8) => {
+  const discoverFPImages = useCallback(async (folderPath: string, maxScan: number = 1) => {
     const found: string[] = [];
     for (let i = 1; i <= maxScan; i++) {
       const candidateRelative = `FP/${i}.jpg`;
@@ -159,11 +160,17 @@ const Portfolio: React.FC<PortfolioProps> = ({ lang, toggleLang }) => {
         const data = await portfolioRes.json();
 
         const resolveFPForProject = async (project: Project): Promise<Project> => {
-            let fpList = project.fpImages || [];
+            // Cache discovery per project to avoid repeat HEADs
+            if (!fpDiscoveryCacheRef.current[project.id]) {
+              fpDiscoveryCacheRef.current[project.id] = project.fpImages || [];
+            }
 
-            // If no explicit list, try to discover numbered images in FP folder
+            let fpList = fpDiscoveryCacheRef.current[project.id];
+
+            // If no explicit list, try to discover numbered images in FP folder (1.jpg only)
             if ((!fpList || fpList.length === 0) && project.folderPath) {
                 fpList = await discoverFPImages(project.folderPath);
+                fpDiscoveryCacheRef.current[project.id] = fpList;
             }
 
             if (fpList.length > 0) {
