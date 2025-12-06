@@ -28,6 +28,12 @@ const App: React.FC = () => {
 
   // Font Selector Modal State
   const [showFontSelector, setShowFontSelector] = useState(false);
+
+  // Viewport unit fallback for older webviews (e.g., desktop WeChat)
+  const supportsDvh = typeof CSS !== 'undefined' && CSS.supports && CSS.supports('height', '100dvh');
+  const viewportUnit = supportsDvh ? 'dvh' : 'vh';
+  const viewportHeight = `100${viewportUnit}`;
+  const contentMaxHeight = `calc(120${viewportUnit} - ${isMobileView ? 80 : 96}px)`;
   
   // Refs for scroll and long-press logic
   const scrollTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -153,17 +159,19 @@ const App: React.FC = () => {
   const showFloatingButtons = showControls && !isScrolling && !isTextBottomNavVisible && !isMobilePortfolio;
 
   return (
-    <div className="h-[100dvh] w-full flex flex-col text-black bg-white overflow-hidden selection:bg-black selection:text-white relative">
+    <div 
+      className="w-full flex flex-col text-black bg-white overflow-hidden selection:bg-black selection:text-white relative"
+      style={{ height: viewportHeight, minHeight: viewportHeight }}
+    >
       <Navigation currentView={currentView} onChangeView={setCurrentView} lang={lang} />
       
-      <main className="flex-grow relative pt-20 md:pt-24 h-full overflow-hidden max-h-[120dvh]">
+      <main 
+        className="flex-grow relative pt-20 md:pt-24 h-full overflow-hidden"
+        style={{ maxHeight: contentMaxHeight }}
+      >
         <div 
           className={`w-full h-full ${currentView === 'ABOUT' ? 'overflow-hidden' : 'overflow-y-auto'}`}
-          style={{
-            maxHeight: window.innerWidth < 768 
-              ? 'calc(120dvh - 80px)'   // limit to 1.2x viewport minus mobile nav
-              : 'calc(120dvh - 96px)'   // minus desktop nav
-          }}
+          style={{ maxHeight: contentMaxHeight }}
           onScroll={currentView !== 'ABOUT' ? handleScroll : undefined}
         >
           {renderContent()}
