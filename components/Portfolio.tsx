@@ -1122,6 +1122,15 @@ const Portfolio: React.FC<PortfolioProps> = ({ lang, toggleLang }) => {
                                                     setHiResLoadedMap((prev) => ({ ...prev, [mobileSliderIndex]: true }));
                                                   }
                                                 }}
+                                                onError={(e) => {
+                                                  const hi = getFullImageUrl(currentMobileImage);
+                                                  if (e.currentTarget.src !== hi) {
+                                                    e.currentTarget.src = hi;
+                                                    return;
+                                                  }
+                                                  setSliderLoading(false);
+                                                  setHiResLoadedMap((prev) => ({ ...prev, [mobileSliderIndex]: true }));
+                                                }}
                                               />
                                             </div>
                                           )}
@@ -1468,6 +1477,14 @@ const Portfolio: React.FC<PortfolioProps> = ({ lang, toggleLang }) => {
                                           setSliderLoading(false);
                                           setHiResLoadedMap((prev) => ({ ...prev, [idx]: true }));
                                         }
+                                      }}
+                                      onError={(e) => {
+                                        if (e.currentTarget.src !== hi) {
+                                          e.currentTarget.src = hi;
+                                          return;
+                                        }
+                                        setSliderLoading(false);
+                                        setHiResLoadedMap((prev) => ({ ...prev, [idx]: true }));
                                       }}
                                     />
                                   </div>
