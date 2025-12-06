@@ -47,10 +47,9 @@ const Portfolio: React.FC<PortfolioProps> = ({ lang, toggleLang }) => {
   const [detailLoading, setDetailLoading] = useState(false);
   const [imageAspectRatio, setImageAspectRatio] = useState<number | undefined>(undefined);
   const [detailImagesReady, setDetailImagesReady] = useState(false);
+  const [lowResMap, setLowResMap] = useState<Record<number, string>>({});
   const [sliderLoading, setSliderLoading] = useState(true);
-  const [mobileSliderIndex, setMobileSliderIndex] = useState(0);
-  const mobileSlideStartX = useRef<number | null>(null);
-  const mobileSlideCurrentX = useRef<number | null>(null);
+  const [minLoadingDone, setMinLoadingDone] = useState(false);
 
   // Index Overlay State
   const [showIndex, setShowIndex] = useState(false);
@@ -67,6 +66,7 @@ const Portfolio: React.FC<PortfolioProps> = ({ lang, toggleLang }) => {
   const [isGalleryOpen, setIsGalleryOpen] = useState(false); // Default collapsed
   const [lightboxHiResSrc, setLightboxHiResSrc] = useState<string | null>(null);
   const thumbCacheRef = useRef<Record<string, MeasuredImage[]>>({});
+  const minLoadTimerRef = useRef<number | null>(null);
 
   // Text Expansion State
   const [isTextOpen, setIsTextOpen] = useState(false); // Default collapsed
@@ -92,6 +92,15 @@ const Portfolio: React.FC<PortfolioProps> = ({ lang, toggleLang }) => {
 
   // Device Check
   const [isMobile, setIsMobile] = useState(false);
+
+  // Reset slider/loading state when switching projects
+  useEffect(() => {
+    if (selectedProject) {
+      setSliderLoading(true);
+      setDetailImagesReady(false);
+      setMinLoadingDone(false);
+    }
+  }, [selectedProject]);
 
   // Particle tweak controls (temporary UI)
   const [particleGap, setParticleGap] = useState(6);
@@ -419,7 +428,6 @@ const Portfolio: React.FC<PortfolioProps> = ({ lang, toggleLang }) => {
     if (isDraggingRef.current) return;
 
     setSelectedProject(project);
-    setMobileSliderIndex(0);
     setDetailLoading(true);
     setDetailContent(null);
     setIsAtTop(true); 
@@ -430,10 +438,11 @@ const Portfolio: React.FC<PortfolioProps> = ({ lang, toggleLang }) => {
     setShowIndex(false); 
     setIsGalleryOpen(false); // Reset gallery state
     setDetailImagesReady(false);
+    setLowResMap({});
     setSliderLoading(true);
-    setDragOffset(0);
-    mobileSlideStartX.current = null;
-    mobileSlideCurrentX.current = null;
+    setMinLoadingDone(false);
+    if (minLoadTimerRef.current) clearTimeout(minLoadTimerRef.current);
+    minLoadTimerRef.current = window.setTimeout(() => setMinLoadingDone(true), 3000);
     // Always start closed on both desktop and mobile
     setIsTextOpen(false); 
     
@@ -514,11 +523,13 @@ const Portfolio: React.FC<PortfolioProps> = ({ lang, toggleLang }) => {
                 setImageAspectRatio(ratio);
                 setSliderLoading(false);
                 setDetailImagesReady(true);
+                setMinLoadingDone(true);
             };
             img.onerror = () => {
                 setImageAspectRatio(16/9); 
                 setSliderLoading(false);
                 setDetailImagesReady(true);
+                setMinLoadingDone(true);
             };
         } else {
             setImageAspectRatio(16/9);
@@ -542,16 +553,37 @@ const Portfolio: React.FC<PortfolioProps> = ({ lang, toggleLang }) => {
                 setThumbDims(placeholderDims);
 
                 const dimsPromise = thumbs.map((srcRaw, idx) => {
-                  return new Promise<MeasuredImage | null>((resolve) => {
-                    const src = getFullUrl(srcRaw);
-                    const img = new Image();
-                    img.src = src;
-                    img.onload = () => {
-                      const ratio = img.naturalWidth && img.naturalHeight ? (img.naturalWidth / img.naturalHeight) : 1;
-                      resolve({ src, fullSrc: src, ratio, originalIndex: idx });
-                    };
-                    img.onerror = () => resolve(null);
-                  });
+                   return new Promise<MeasuredImage | null>(async (resolve) => {
+                       const src = getFullUrl(srcRaw);
+                       try {
+                           const res = await fetch(src);
+                           if (!res.ok) throw new Error('fetch failed');
+                           const blob = await res.blob();
+                           let thumbSrc = src;
+                           let ratio = 1;
+                           try {
+                               const bitmap = await createImageBitmap(blob, { resizeWidth: 600 });
+                               ratio = bitmap.width / bitmap.height || 1;
+                               const canvas = document.createElement('canvas');
+                               canvas.width = bitmap.width;
+                               canvas.height = bitmap.height;
+                               const ctx = canvas.getContext('2d');
+                               if (ctx) {
+                                   ctx.drawImage(bitmap, 0, 0, bitmap.width, bitmap.height);
+                                   thumbSrc = canvas.toDataURL('image/jpeg', 0.75);
+                               }
+                               bitmap.close();
+                           } catch {
+                               const img = new Image();
+                               img.src = src;
+                               await img.decode();
+                               ratio = img.naturalWidth / img.naturalHeight || 1;
+                           }
+                           resolve({ src: thumbSrc, fullSrc: src, ratio, originalIndex: idx });
+                       } catch (e) {
+                           resolve(null);
+                       }
+                   });
                 });
                 Promise.all(dimsPromise).then(loadedDims => {
                     const finalDims = loadedDims.filter((d): d is MeasuredImage => Boolean(d));
@@ -562,6 +594,36 @@ const Portfolio: React.FC<PortfolioProps> = ({ lang, toggleLang }) => {
         }
 
         setDetailContent(content);
+        // Prepare low-res placeholders for imagesA
+        const sliderImagesLow = content.imagesA || content.images || [];
+        if (project.folderPath && sliderImagesLow.length > 0) {
+            const createLowRes = async () => {
+                const map: Record<number, string> = {};
+                for (let i = 0; i < sliderImagesLow.length; i++) {
+                    const imgPath = sliderImagesLow[i];
+                    const full = getFullUrl(imgPath);
+                    try {
+                        const res = await fetch(full);
+                        if (!res.ok) continue;
+                        const blob = await res.blob();
+                        const bitmap = await createImageBitmap(blob, { resizeWidth: 1080 });
+                        const canvas = document.createElement('canvas');
+                        canvas.width = bitmap.width;
+                        canvas.height = bitmap.height;
+                        const ctx = canvas.getContext('2d');
+                        if (ctx) {
+                            ctx.drawImage(bitmap, 0, 0, bitmap.width, bitmap.height);
+                            map[i] = canvas.toDataURL('image/jpeg', 0.7);
+                        }
+                        bitmap.close();
+                    } catch (e) {
+                        // ignore
+                    }
+                }
+                setLowResMap(map);
+            };
+            createLowRes();
+        }
     } catch (e) {
         console.warn("Could not load detail data, using fallback", e);
         setDetailContent({
@@ -949,38 +1011,6 @@ const Portfolio: React.FC<PortfolioProps> = ({ lang, toggleLang }) => {
     if (isMobile) {
         // Logic to hide bottom controls if top controls are visible
         const showBottomControls = isAtBottom && !isAtTop;
-        const sliderImages = detailContent?.imagesA || detailContent?.images || [];
-        const totalSlides = sliderImages.length;
-        const currentMobileImage = sliderImages[mobileSliderIndex] || sliderImages[0] || '';
-
-        const handleMobileSlideStart = (x: number) => {
-          mobileSlideStartX.current = x;
-          mobileSlideCurrentX.current = x;
-        };
-
-        const handleMobileSlideMove = (x: number) => {
-          if (mobileSlideStartX.current === null) return;
-          mobileSlideCurrentX.current = x;
-        };
-
-        const handleMobileSlideEnd = () => {
-          if (mobileSlideStartX.current === null || mobileSlideCurrentX.current === null) {
-            mobileSlideStartX.current = null;
-            mobileSlideCurrentX.current = null;
-            return;
-          }
-          const delta = mobileSlideCurrentX.current - mobileSlideStartX.current;
-          const threshold = 40;
-          if (delta > threshold && totalSlides > 1) {
-            setMobileSliderIndex((prev) => (prev - 1 + totalSlides) % totalSlides);
-            setSliderLoading(true);
-          } else if (delta < -threshold && totalSlides > 1) {
-            setMobileSliderIndex((prev) => (prev + 1) % totalSlides);
-            setSliderLoading(true);
-          }
-          mobileSlideStartX.current = null;
-          mobileSlideCurrentX.current = null;
-        };
 
         return (
             <div 
@@ -1049,47 +1079,47 @@ const Portfolio: React.FC<PortfolioProps> = ({ lang, toggleLang }) => {
                         <>
                              {/* Content Wrapper */}
                              <div className="w-full max-w-4xl flex flex-col px-6">
-                                 {/* 1. Slider (single render, virtualized) */}
+                                 {/* 1. Slider */}
                                  {sliderImages.length > 0 && (
-                                   <div className="relative mb-2 w-full group">
-                                      <div 
-                                        style={{ aspectRatio: imageAspectRatio ? imageAspectRatio : 'auto' }}
-                                        className={`w-full relative bg-white ${!imageAspectRatio ? 'min-h-[50vh]' : ''}`}
-                                        onTouchStart={(e) => handleMobileSlideStart(e.touches[0].clientX)}
-                                        onTouchMove={(e) => handleMobileSlideMove(e.touches[0].clientX)}
-                                        onTouchEnd={handleMobileSlideEnd}
-                                      >
-                                        {sliderLoading && (
-                                          <div className="absolute inset-0 flex items-center justify-center text-[#F22C2C] text-sm bg-white" style={{ fontFamily: '"Doto", sans-serif' }}>
-                                            Loading...
-                                          </div>
-                                        )}
-                                        {currentMobileImage && (
-                                          <div className="w-full h-full flex items-center justify-center">
-                                            <img 
-                                              src={getFullImageUrl(currentMobileImage)} 
-                                              alt="" 
-                                              className="w-full h-full object-contain"
-                                              loading="eager"
-                                              decoding="async"
-                                              onLoad={() => setSliderLoading(false)}
-                                            />
-                                          </div>
-                                        )}
-                                        {sliderImages.length > 1 && !sliderLoading && (
-                                          <div className="absolute inset-y-0 left-0 right-0 flex items-center justify-between px-2 text-[#F22C2C] text-xl font-light pointer-events-none">
-                                            <span className="pointer-events-auto px-2" onClick={() => { setSliderLoading(true); setMobileSliderIndex((prev) => (prev - 1 + totalSlides) % totalSlides); }}>&lt;</span>
-                                            <span className="pointer-events-auto px-2" onClick={() => { setSliderLoading(true); setMobileSliderIndex((prev) => (prev + 1) % totalSlides); }}>&gt;</span>
-                                          </div>
-                                        )}
-                                        {sliderImages.length > 1 && (
-                                          <div className="absolute bottom-2 left-0 right-0 text-center text-[10px] text-[#F22C2C]" style={{ fontFamily: '"Doto", sans-serif' }}>
-                                            {mobileSliderIndex + 1} / {totalSlides}
-                                          </div>
-                                        )}
+                                     <div className="relative mb-2 w-full group">
+                                        <div 
+                                            style={{ aspectRatio: imageAspectRatio ? imageAspectRatio : 'auto' }}
+                                            className={`w-full relative bg-white ${!imageAspectRatio ? 'min-h-[50vh]' : ''}`}
+                                        >
+                                          {(sliderLoading || !minLoadingDone) ? (
+                                            <div className="absolute inset-0 flex items-center justify-center text-[#F22C2C] text-sm bg-white" style={{ fontFamily: '"Doto", sans-serif' }}>
+                                              Loading...
+                                            </div>
+                                          ) : null}
+                                          {(!sliderLoading && minLoadingDone) && (
+                                            <div 
+                                              className="flex overflow-x-auto snap-x snap-mandatory scrollbar-hide scroll-smooth w-full h-full gap-4"
+                                              style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+                                            >
+                                              {sliderImages.map((img, idx) => {
+                                                  const src = getFullImageUrl(img);
+                                                  return (
+                                                      <div key={idx} className="w-full h-full flex-shrink-0 snap-center flex items-center justify-center bg-white">
+                                                        <img 
+                                                          src={src} 
+                                                          alt="" 
+                                                          className="w-full h-full object-contain"
+                                                          loading={idx === 0 ? 'eager' : 'lazy'}
+                                                          decoding="async"
+                                                          onLoad={() => {
+                                                            if (idx === 0) {
+                                                              setSliderLoading(false);
+                                                            }
+                                                          }}
+                                                        />
+                                                      </div>
+                                                  );
+                                              })}
+                                            </div>
+                                          )}
+                                        </div>
                                       </div>
-                                   </div>
-                                 )}
+                                  )}
 
                                  {/* 2. Header */}
                                  <div 
