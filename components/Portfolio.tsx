@@ -281,10 +281,8 @@ const Portfolio: React.FC<PortfolioProps> = ({ lang, toggleLang }) => {
     const sliderImages = detailContent?.imagesA || detailContent?.images || [];
     const totalSlides = sliderImages.length;
     if (delta > threshold && totalSlides > 1) {
-      setSliderLoading(true);
       setMobileSliderIndex((prev) => (prev - 1 + totalSlides) % totalSlides);
     } else if (delta < -threshold && totalSlides > 1) {
-      setSliderLoading(true);
       setMobileSliderIndex((prev) => (prev + 1) % totalSlides);
     }
     mobileSlideStartX.current = null;
@@ -574,13 +572,12 @@ const Portfolio: React.FC<PortfolioProps> = ({ lang, toggleLang }) => {
             img.onload = () => {
                 const ratio = img.naturalWidth / img.naturalHeight;
                 setImageAspectRatio(ratio);
-                setSliderLoading(true); // will clear once low-res loads
+                setSliderLoading(false);
                 setDetailImagesReady(true);
-                setSliderLoading(true);
             };
             img.onerror = () => {
                 setImageAspectRatio(16/9); 
-                setSliderLoading(true);
+                setSliderLoading(false);
                 setDetailImagesReady(true);
             };
         } else {
