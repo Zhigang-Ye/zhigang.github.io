@@ -423,7 +423,7 @@ const ParticleImage: React.FC<ParticleImageProps> = ({
         {/* Layout Container: Controls size. Image is visible ONLY if fallback is active. */}
         <div 
             ref={containerRef}
-            className={`relative inline-block ${className}`}
+            className={`relative block ${className}`}
         >
             <img 
                 ref={imgRef}

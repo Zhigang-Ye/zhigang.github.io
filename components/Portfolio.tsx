@@ -1564,7 +1564,7 @@ const Portfolio: React.FC<PortfolioProps> = ({ lang, toggleLang }) => {
         )}
         <div 
             className={`flex flex-col gap-2 cursor-pointer group w-min relative transition-all duration-300
-              ${isMobile ? 'items-start' : 'items-center'}
+              ${isMobile ? 'items-center w-full' : 'items-center'}
             `}
             onClick={() => handleProjectClick(currentProject)}
         >
@@ -1578,8 +1578,8 @@ const Portfolio: React.FC<PortfolioProps> = ({ lang, toggleLang }) => {
                 className={`
                   block h-auto object-contain select-none
                   ${isMobile 
-                    ? 'w-[96vw] max-w-[96vw] max-h-[82vh] min-w-[260px]' 
-                    : 'w-auto max-h-[85vh] max-w-[85vw] min-w-[450px]'
+                    ? 'w-[96vw] max-w-[96vw] max-h-[82vh] min-w-[260px] mx-auto' 
+                    : 'w-auto max-h-[85vh] max-w-[85vw] min-w-[450px] mx-auto'
                   }
                 `}
             />
