@@ -70,6 +70,8 @@ const Portfolio: React.FC<PortfolioProps> = ({ lang, toggleLang }) => {
   const fpDiscoveryCacheRef = useRef<Record<string, string[]>>({});
   const mobileSlideStartX = useRef<number | null>(null);
   const mobileSlideCurrentX = useRef<number | null>(null);
+  const isProgrammaticScroll = useRef(false);
+  const scrollSyncTimerRef = useRef<number | null>(null);
 
   // Text Expansion State
   const [isTextOpen, setIsTextOpen] = useState(false); // Default collapsed
@@ -286,6 +288,24 @@ const Portfolio: React.FC<PortfolioProps> = ({ lang, toggleLang }) => {
     }
     mobileSlideStartX.current = null;
     mobileSlideCurrentX.current = null;
+  };
+
+  const handleSliderScroll = () => {
+    if (isProgrammaticScroll.current) return;
+    if (scrollSyncTimerRef.current) {
+      clearTimeout(scrollSyncTimerRef.current);
+    }
+    const container = imageScrollRef.current;
+    if (!container) return;
+    scrollSyncTimerRef.current = window.setTimeout(() => {
+      const width = container.clientWidth || 1;
+      const idx = Math.round(container.scrollLeft / width);
+      const images = detailContent?.imagesA || detailContent?.images || [];
+      const clamped = Math.max(0, Math.min(images.length - 1, idx));
+      if (clamped !== sliderIndex) {
+        setSliderIndex(clamped);
+      }
+    }, 80);
   };
 
   // Build low-res paths from generated C folder
@@ -659,6 +679,20 @@ const Portfolio: React.FC<PortfolioProps> = ({ lang, toggleLang }) => {
     setIsAtBottom(distanceToBottom < 20);
   }, []);
 
+  // Sync scroll position to current index
+  useEffect(() => {
+    if (!detailContent) return;
+    const images = detailContent.imagesA || detailContent.images || [];
+    if (images.length === 0) return;
+    const container = imageScrollRef.current;
+    if (!container) return;
+    const width = container.clientWidth || 1;
+    const targetLeft = sliderIndex * width;
+    isProgrammaticScroll.current = true;
+    container.scrollTo({ left: targetLeft, behavior: 'smooth' });
+    window.setTimeout(() => { isProgrammaticScroll.current = false; }, 200);
+  }, [sliderIndex, detailContent]);
+
   // Keyboard navigation for desktop detail view
   useEffect(() => {
     if (!selectedProject || isMobile) return;
@@ -677,7 +711,7 @@ const Portfolio: React.FC<PortfolioProps> = ({ lang, toggleLang }) => {
 
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, [selectedProject, isMobile, isGalleryOpen, detailContent]);
+  }, [selectedProject, isMobile, isGalleryOpen, detailContent, sliderIndex]);
 
   // --- Justified Gallery Layout Calculation ---
   useLayoutEffect(() => {
@@ -1075,7 +1109,7 @@ const Portfolio: React.FC<PortfolioProps> = ({ lang, toggleLang }) => {
                         <>
                              {/* Content Wrapper */}
                              <div className="w-full max-w-4xl flex flex-col px-6">
-                                 {/* 1. Slider (single view, swipe/keys change index) */}
+                                 {/* 1. Slider (horizontal strip, shared mobile/desktop) */}
                                  {sliderImages.length > 0 && (
                                      <div className="relative mb-2 w-full group">
                                         <div 
@@ -1089,43 +1123,60 @@ const Portfolio: React.FC<PortfolioProps> = ({ lang, toggleLang }) => {
                                             onMouseUp={handleMobileSlideEnd}
                                             onMouseLeave={() => { if (mobileSlideStartX.current !== null) handleMobileSlideEnd(); }}
                                         >
-                                          <div className="w-full h-full flex items-center justify-center">
-                                            {(() => {
-                                                const img = sliderImages[sliderIndex] || sliderImages[0];
-                                                const hi = img ? getFullImageUrl(img) : '';
-                                                const low = img ? getLowResAUrl(selectedProject, img) : '';
-                                                const showHi = hiResLoadedMap[sliderIndex];
+                                          <div 
+                                            ref={imageScrollRef}
+                                            className="flex overflow-x-auto snap-x snap-mandatory scrollbar-hide scroll-smooth w-full h-full"
+                                            style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+                                            onScroll={handleSliderScroll}
+                                            onTouchStart={(e) => handleMobileSlideStart(e.touches[0].clientX)}
+                                            onTouchMove={(e) => handleMobileSlideMove(e.touches[0].clientX)}
+                                            onTouchEnd={handleMobileSlideEnd}
+                                            onMouseDown={(e) => handleMobileSlideStart(e.clientX)}
+                                            onMouseMove={(e) => { if (e.buttons === 1) handleMobileSlideMove(e.clientX); }}
+                                            onMouseUp={handleMobileSlideEnd}
+                                            onMouseLeave={() => { if (mobileSlideStartX.current !== null) handleMobileSlideEnd(); }}
+                                          >
+                                            {sliderImages.map((img, idx) => {
+                                                const hi = getFullImageUrl(img);
+                                                const low = getLowResAUrl(selectedProject, img);
+                                                const showHi = hiResLoadedMap[idx];
                                                 const allowLow = selectedProject?.id ? lowResAvailable[selectedProject.id] !== false : true;
                                                 const displaySrc = (showHi || !allowLow) ? hi : low;
-                                                return img ? (
-                                                  <img 
-                                                    src={displaySrc}
-                                                    alt=""
-                                                    className="w-full h-full object-contain"
-                                                    loading="eager"
-                                                    decoding="async"
-                                                    onLoad={() => {
-                                                      if (!showHi) {
-                                                        const pre = new Image();
-                                                        pre.src = hi;
-                                                        pre.onload = () => setHiResLoadedMap((prev) => ({ ...prev, [sliderIndex]: true }));
-                                                      } else {
-                                                        setHiResLoadedMap((prev) => ({ ...prev, [sliderIndex]: true }));
-                                                      }
-                                                    }}
-                                                    onError={(e) => {
-                                                      if (e.currentTarget.src !== hi) {
-                                                        if (selectedProject?.id) {
-                                                          setLowResAvailable((prev) => ({ ...prev, [selectedProject.id]: false }));
-                                                        }
-                                                        e.currentTarget.src = hi;
-                                                        return;
-                                                      }
-                                                      setHiResLoadedMap((prev) => ({ ...prev, [sliderIndex]: true }));
-                                                    }}
-                                                  />
-                                                ) : null;
-                                            })()}
+                                                return (
+                                                    <div 
+                                                      key={idx} 
+                                                      className="w-full h-full flex-shrink-0 snap-start flex items-center justify-center bg-white"
+                                                      style={{ minWidth: '100%' }}
+                                                    >
+                                                        <img 
+                                                          src={displaySrc}
+                                                          alt=""
+                                                          className="w-full h-full object-contain"
+                                                          loading={idx === 0 ? 'eager' : 'lazy'}
+                                                          decoding="async"
+                                                          onLoad={() => {
+                                                            if (!showHi) {
+                                                              const pre = new Image();
+                                                              pre.src = hi;
+                                                              pre.onload = () => setHiResLoadedMap((prev) => ({ ...prev, [idx]: true }));
+                                                            } else {
+                                                              setHiResLoadedMap((prev) => ({ ...prev, [idx]: true }));
+                                                            }
+                                                          }}
+                                                          onError={(e) => {
+                                                            if (e.currentTarget.src !== hi) {
+                                                              if (selectedProject?.id) {
+                                                                setLowResAvailable((prev) => ({ ...prev, [selectedProject.id]: false }));
+                                                              }
+                                                              e.currentTarget.src = hi;
+                                                              return;
+                                                            }
+                                                            setHiResLoadedMap((prev) => ({ ...prev, [idx]: true }));
+                                                          }}
+                                                        />
+                                                    </div>
+                                                );
+                                            })}
                                           </div>
                                         </div>
                                       </div>
@@ -1430,45 +1481,54 @@ const Portfolio: React.FC<PortfolioProps> = ({ lang, toggleLang }) => {
           onTouchMove={(e) => handleMobileSlideMove(e.touches[0].clientX)}
           onTouchEnd={handleMobileSlideEnd}
         >
-            <div className="flex h-full w-full max-w-[85vw] max-h-[85vh] items-center justify-center px-6">
-              {(() => {
-                const img = sliderImages[sliderIndex] || sliderImages[0];
-                if (!img) return null;
+            <div 
+              ref={imageScrollRef}
+              className="flex h-full w-full max-w-[85vw] max-h-[85vh] overflow-x-auto snap-x snap-mandatory px-6 scrollbar-hide"
+              style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+              onScroll={handleSliderScroll}
+            >
+              {sliderImages.map((img, idx) => {
                 const hi = getFullImageUrl(img);
                 const low = getLowResAUrl(selectedProject, img);
-                const showHi = hiResLoadedMap[sliderIndex];
+                const showHi = hiResLoadedMap[idx];
                 const allowLowRes = selectedProject?.id ? lowResAvailable[selectedProject.id] !== false : true;
                 const displaySrc = (showHi || !allowLowRes) ? hi : low;
                 return (
-                  <img 
-                    src={displaySrc} 
-                    alt="" 
-                    className="max-h-[85vh] max-w-full object-contain select-none block"
-                    draggable={false}
-                    loading="eager"
-                    decoding="async"
-                    onLoad={() => {
-                      if (!showHi) {
-                        const pre = new Image();
-                        pre.src = hi;
-                        pre.onload = () => setHiResLoadedMap((prev) => ({ ...prev, [sliderIndex]: true }));
-                      } else {
-                        setHiResLoadedMap((prev) => ({ ...prev, [sliderIndex]: true }));
-                      }
-                    }}
-                    onError={(e) => {
-                      if (e.currentTarget.src !== hi) {
-                        if (selectedProject?.id) {
-                          setLowResAvailable((prev) => ({ ...prev, [selectedProject.id]: false }));
+                  <div 
+                    key={idx} 
+                    className="flex-shrink-0 w-full h-full flex items-center justify-center snap-start"
+                    style={{ minWidth: '100%' }}
+                  >
+                    <img 
+                      src={displaySrc} 
+                      alt="" 
+                      className="max-h-[85vh] max-w-full object-contain select-none block"
+                      draggable={false}
+                      loading={idx === 0 ? 'eager' : 'lazy'}
+                      decoding="async"
+                      onLoad={() => {
+                        if (!showHi) {
+                          const pre = new Image();
+                          pre.src = hi;
+                          pre.onload = () => setHiResLoadedMap((prev) => ({ ...prev, [idx]: true }));
+                        } else {
+                          setHiResLoadedMap((prev) => ({ ...prev, [idx]: true }));
                         }
-                        e.currentTarget.src = hi;
-                        return;
-                      }
-                      setHiResLoadedMap((prev) => ({ ...prev, [sliderIndex]: true }));
-                    }}
-                  />
+                      }}
+                      onError={(e) => {
+                        if (e.currentTarget.src !== hi) {
+                          if (selectedProject?.id) {
+                            setLowResAvailable((prev) => ({ ...prev, [selectedProject.id]: false }));
+                          }
+                          e.currentTarget.src = hi;
+                          return;
+                        }
+                        setHiResLoadedMap((prev) => ({ ...prev, [idx]: true }));
+                      }}
+                    />
+                  </div>
                 );
-              })()}
+              })}
             </div>
         </div>
                     )
