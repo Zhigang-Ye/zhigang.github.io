@@ -6,7 +6,8 @@
     "shortStories": [
       "text/short_stories/ss1.json",
       "text/short_stories/ss2.json",
-      "text/short_stories/ss3.json"
+      "text/short_stories/ss3.json",
+      "text/short_stories/ss4.json"
     ],
     "memoNovels": [
       "text/memo_novels/n1.json",
@@ -20,8 +21,13 @@
       "text/memo_novels/n9.json"
     ],
     "writing": [
-      "text/essays/e1.json"
+      "text/essays/e1.json",
+      "text/essays/e2.json"
     ],
-    "diary": []
+    "diary": [
+      "text/diaries/d1.json",
+      "text/diaries/d2.json",
+      "text/diaries/d3.json"
+    ]
   }
 }
