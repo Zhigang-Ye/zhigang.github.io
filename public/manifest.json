@@ -20,12 +20,11 @@
       "text/memo_novels/n8.json",
       "text/memo_novels/n9.json"
     ],
-    "writing": [
-      "text/essays/e1.json",
+    "writing": [],
+    "poetry": [
       "text/essays/e2.json"
     ],
     "diary": [
-      "text/diaries/d1.json",
       "text/diaries/d2.json",
       "text/diaries/d3.json"
     ]
