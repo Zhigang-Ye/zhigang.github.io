@@ -17,6 +17,7 @@ interface Manifest {
     memoNovels: string[];
     writing: string[];
     diary: string[];
+    poetry?: string[];
   };
 }
 
@@ -70,6 +71,10 @@ const Text: React.FC<TextProps> = ({ lang, isScrolling, setBottomNavVisible }) =
           (manifest.text.writing || []).map(url => fetch(url).then(res => res.json()))
         );
 
+        const poems = await Promise.all(
+          (manifest.text.poetry || []).map(url => fetch(url).then(res => res.json()))
+        );
+
         const diaries = await Promise.all(
           (manifest.text.diary || []).map(url => fetch(url).then(res => res.json()))
         );
@@ -86,6 +91,10 @@ const Text: React.FC<TextProps> = ({ lang, isScrolling, setBottomNavVisible }) =
           {
             category: { cn: "写作", tw: "寫作", en: "Writing" },
             items: articles
+          },
+          {
+            category: { cn: "诗", tw: "詩", en: "Poetry" },
+            items: poems
           },
           {
             category: { cn: "日记", tw: "日記", en: "Diaries" },
