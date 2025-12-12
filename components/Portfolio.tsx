@@ -107,6 +107,17 @@ const Portfolio: React.FC<PortfolioProps> = ({ lang, toggleLang }) => {
   const [particleOffset, setParticleOffset] = useState(0);
   const autoOpenTimerRef = useRef<number | null>(null);
 
+  // Randomize particle defaults (density/size) between two presets on mount
+  useEffect(() => {
+    const presets = [
+      { gap: 6, radius: 2.8 },
+      { gap: 4, radius: 1.8 },
+    ];
+    const pick = presets[Math.floor(Math.random() * presets.length)];
+    setParticleGap(pick.gap);
+    setParticleDotRadius(pick.radius);
+  }, []);
+
   useEffect(() => {
     const checkMobile = () => {
         setIsMobile(window.innerWidth < 768);
