@@ -1181,45 +1181,53 @@ const Portfolio: React.FC<PortfolioProps> = ({ lang, toggleLang }) => {
                                                 const low = getLowResAUrl(selectedProject, img);
                                                 const showHi = hiResLoadedMap[idx];
                                                 const allowLow = selectedProject?.id ? lowResAvailable[selectedProject.id] !== false : true;
-                                                const displaySrc = (showHi || !allowLow) ? hi : low;
+                                                const showLow = allowLow;
+                                                const shouldShowHi = showHi || !allowLow;
                                                 return (
                                                     <div 
                                                       key={idx} 
                                                       className="h-full flex-shrink-0 snap-start flex items-center justify-center bg-white"
                                                       style={sliderItemStyle}
                                                     >
-                                                        <img 
-                                                          src={displaySrc}
-                                                          alt=""
-                                                          className="w-full h-full object-contain"
-                                                          loading={idx === 0 ? 'eager' : 'lazy'}
-                                                          decoding="async"
-                                                          onLoad={(e) => {
-                                                            if (!imageAspectRatio && idx === 0) {
-                                                              const { naturalWidth, naturalHeight } = e.currentTarget;
-                                                              if (naturalWidth && naturalHeight) {
-                                                                setImageAspectRatio(naturalWidth / naturalHeight);
-                                                              }
-                                                            }
-                                                            if (!showHi) {
-                                                              const pre = new Image();
-                                                              pre.src = hi;
-                                                              pre.onload = () => setHiResLoadedMap((prev) => ({ ...prev, [idx]: true }));
-                                                            } else {
+                                                        <div className="relative w-full h-full">
+                                                          {showLow && (
+                                                            <img 
+                                                              src={low}
+                                                              alt=""
+                                                              className="absolute inset-0 w-full h-full object-contain"
+                                                              loading={idx === 0 ? 'eager' : 'lazy'}
+                                                              decoding="async"
+                                                              onLoad={(e) => {
+                                                                if (!imageAspectRatio && idx === 0) {
+                                                                  const { naturalWidth, naturalHeight } = e.currentTarget;
+                                                                  if (naturalWidth && naturalHeight) {
+                                                                    setImageAspectRatio(naturalWidth / naturalHeight);
+                                                                  }
+                                                                }
+                                                              }}
+                                                              onError={() => {
+                                                                if (selectedProject?.id) {
+                                                                  setLowResAvailable((prev) => ({ ...prev, [selectedProject.id]: false }));
+                                                                }
+                                                              }}
+                                                            />
+                                                          )}
+                                                          <img 
+                                                            src={hi}
+                                                            alt=""
+                                                            className={`absolute inset-0 w-full h-full object-contain transition-opacity duration-300 ${shouldShowHi ? 'opacity-100' : 'opacity-0'}`}
+                                                            loading={idx === 0 ? 'eager' : 'lazy'}
+                                                            decoding="async"
+                                                            onLoad={() => {
                                                               setHiResLoadedMap((prev) => ({ ...prev, [idx]: true }));
-                                                            }
-                                                          }}
-                                                          onError={(e) => {
-                                                            if (e.currentTarget.src !== hi) {
-                                                              if (selectedProject?.id) {
-                                                                setLowResAvailable((prev) => ({ ...prev, [selectedProject.id]: false }));
+                                                            }}
+                                                            onError={() => {
+                                                              if (!showLow) {
+                                                                setHiResLoadedMap((prev) => ({ ...prev, [idx]: true }));
                                                               }
-                                                              e.currentTarget.src = hi;
-                                                              return;
-                                                            }
-                                                            setHiResLoadedMap((prev) => ({ ...prev, [idx]: true }));
-                                                          }}
-                                                        />
+                                                            }}
+                                                          />
+                                                        </div>
                                                     </div>
                                                 );
                                             })}
@@ -1537,40 +1545,47 @@ const Portfolio: React.FC<PortfolioProps> = ({ lang, toggleLang }) => {
                 const low = getLowResAUrl(selectedProject, img);
                 const showHi = hiResLoadedMap[idx];
                 const allowLowRes = selectedProject?.id ? lowResAvailable[selectedProject.id] !== false : true;
-                const displaySrc = (showHi || !allowLowRes) ? hi : low;
+                const showLow = allowLowRes;
+                const shouldShowHi = showHi || !allowLowRes;
                 return (
                   <div 
                     key={idx} 
                     className="flex-shrink-0 h-full flex items-center justify-center snap-start"
                     style={sliderItemStyle}
                   >
-                    <img 
-                      src={displaySrc} 
-                      alt="" 
-                      className="max-h-[85vh] max-w-full object-contain select-none block"
-                      draggable={false}
-                      loading={idx === 0 ? 'eager' : 'lazy'}
-                      decoding="async"
-                      onLoad={() => {
-                        if (!showHi) {
-                          const pre = new Image();
-                          pre.src = hi;
-                          pre.onload = () => setHiResLoadedMap((prev) => ({ ...prev, [idx]: true }));
-                        } else {
+                    <div className="relative w-full h-full">
+                      {showLow && (
+                        <img 
+                          src={low} 
+                          alt="" 
+                          className="absolute inset-0 w-full h-full object-contain select-none block"
+                          draggable={false}
+                          loading={idx === 0 ? 'eager' : 'lazy'}
+                          decoding="async"
+                          onError={() => {
+                            if (selectedProject?.id) {
+                              setLowResAvailable((prev) => ({ ...prev, [selectedProject.id]: false }));
+                            }
+                          }}
+                        />
+                      )}
+                      <img 
+                        src={hi} 
+                        alt="" 
+                        className={`absolute inset-0 w-full h-full object-contain select-none block transition-opacity duration-300 ${shouldShowHi ? 'opacity-100' : 'opacity-0'}`}
+                        draggable={false}
+                        loading={idx === 0 ? 'eager' : 'lazy'}
+                        decoding="async"
+                        onLoad={() => {
                           setHiResLoadedMap((prev) => ({ ...prev, [idx]: true }));
-                        }
-                      }}
-                      onError={(e) => {
-                        if (e.currentTarget.src !== hi) {
-                          if (selectedProject?.id) {
-                            setLowResAvailable((prev) => ({ ...prev, [selectedProject.id]: false }));
+                        }}
+                        onError={() => {
+                          if (!showLow) {
+                            setHiResLoadedMap((prev) => ({ ...prev, [idx]: true }));
                           }
-                          e.currentTarget.src = hi;
-                          return;
-                        }
-                        setHiResLoadedMap((prev) => ({ ...prev, [idx]: true }));
-                      }}
-                    />
+                        }}
+                      />
+                    </div>
                   </div>
                 );
               })}
