@@ -1506,7 +1506,7 @@ const Portfolio: React.FC<PortfolioProps> = ({ lang, toggleLang }) => {
         >
             <div 
               ref={imageScrollRef}
-              className="flex h-full w-full max-w-[85vw] max-h-[85vh] overflow-x-auto snap-x snap-mandatory px-6 scrollbar-hide"
+              className="flex h-full w-full max-w-[85vw] max-h-[85vh] overflow-x-auto snap-x snap-mandatory scrollbar-hide"
               style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
               onScroll={handleSliderScroll}
             >
