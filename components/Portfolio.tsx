@@ -107,6 +107,7 @@ const Portfolio: React.FC<PortfolioProps> = ({ lang, toggleLang }) => {
   const [slideDirection, setSlideDirection] = useState<'next' | 'prev' | null>(null);
   const [particleOffset, setParticleOffset] = useState(0);
   const autoOpenTimerRef = useRef<number | null>(null);
+  const DEFAULT_SLIDER_RATIO = 3 / 2;
   const SLIDE_GAP_VAR = 'clamp(10px, 2.2vw, 18px)';
   const sliderContainerStyle = {
     '--slide-gap': SLIDE_GAP_VAR,
@@ -1152,8 +1153,8 @@ const Portfolio: React.FC<PortfolioProps> = ({ lang, toggleLang }) => {
                                  {sliderImages.length > 0 && (
                                      <div className="relative mb-2 w-full group">
                                         <div 
-                                            style={{ aspectRatio: imageAspectRatio ? imageAspectRatio : 'auto' }}
-                                            className={`w-full relative bg-white ${!imageAspectRatio ? 'min-h-[50vh]' : ''}`}
+                                            style={{ aspectRatio: imageAspectRatio ?? DEFAULT_SLIDER_RATIO }}
+                                            className="w-full relative bg-white"
                                             onTouchStart={(e) => handleMobileSlideStart(e.touches[0].clientX)}
                                             onTouchMove={(e) => handleMobileSlideMove(e.touches[0].clientX)}
                                             onTouchEnd={handleMobileSlideEnd}
@@ -1193,7 +1194,13 @@ const Portfolio: React.FC<PortfolioProps> = ({ lang, toggleLang }) => {
                                                           className="w-full h-full object-contain"
                                                           loading={idx === 0 ? 'eager' : 'lazy'}
                                                           decoding="async"
-                                                          onLoad={() => {
+                                                          onLoad={(e) => {
+                                                            if (!imageAspectRatio && idx === 0) {
+                                                              const { naturalWidth, naturalHeight } = e.currentTarget;
+                                                              if (naturalWidth && naturalHeight) {
+                                                                setImageAspectRatio(naturalWidth / naturalHeight);
+                                                              }
+                                                            }
                                                             if (!showHi) {
                                                               const pre = new Image();
                                                               pre.src = hi;
