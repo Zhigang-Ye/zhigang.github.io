@@ -107,6 +107,17 @@ const Portfolio: React.FC<PortfolioProps> = ({ lang, toggleLang }) => {
   const [slideDirection, setSlideDirection] = useState<'next' | 'prev' | null>(null);
   const [particleOffset, setParticleOffset] = useState(0);
   const autoOpenTimerRef = useRef<number | null>(null);
+  const SLIDE_GAP_VAR = 'clamp(10px, 2.2vw, 18px)';
+  const sliderContainerStyle = {
+    '--slide-gap': SLIDE_GAP_VAR,
+    gap: 'var(--slide-gap)',
+    scrollbarWidth: 'none',
+    msOverflowStyle: 'none'
+  } as React.CSSProperties;
+  const sliderItemStyle = {
+    width: 'calc(100% - var(--slide-gap))',
+    minWidth: 'calc(100% - var(--slide-gap))'
+  } as React.CSSProperties;
 
   // Randomize particle defaults (density/size) between two presets on mount
   useEffect(() => {
