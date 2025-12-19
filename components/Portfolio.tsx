@@ -1231,7 +1231,20 @@ const Portfolio: React.FC<PortfolioProps> = ({ lang, toggleLang }) => {
                                className={`w-full grid transition-[grid-template-rows] duration-700 ease-[cubic-bezier(0.25,1,0.5,1)] ${isTextOpen ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'}`}
                              >
                                 <div className="overflow-hidden">
-                                    <article className={`${youtubeId ? 'mb-12' : 'mb-32'} w-full max-w-4xl mx-auto px-6 animate-in fade-in duration-700 slide-in-from-top-2`}>
+                                    {youtubeId && (
+                                      <div className="w-full max-w-4xl px-6 mb-12">
+                                        <div className="relative w-full pt-[56.25%] bg-black">
+                                          <iframe 
+                                            className="absolute top-0 left-0 w-full h-full"
+                                            src={`https://www.youtube.com/embed/${youtubeId}`} 
+                                            title="YouTube" 
+                                            frameBorder="0" 
+                                            allowFullScreen
+                                          />
+                                        </div>
+                                      </div>
+                                    )}
+                                    <article className="mb-32 w-full max-w-4xl mx-auto px-6 animate-in fade-in duration-700 slide-in-from-top-2">
                                         <div className="text-base leading-7 text-left md:text-left md:text-balance">
                                         {detailContent?.text && getLangString(detailContent.text)
                                             .split('\n')
@@ -1243,20 +1256,6 @@ const Portfolio: React.FC<PortfolioProps> = ({ lang, toggleLang }) => {
                                         ))}
                                         </div>
                                     </article>
-
-                                     {youtubeId && (
-                                       <div className="w-full max-w-4xl px-6 mb-32">
-                                         <div className="relative w-full pt-[56.25%] bg-black">
-                                           <iframe 
-                                             className="absolute top-0 left-0 w-full h-full"
-                                             src={`https://www.youtube.com/embed/${youtubeId}`} 
-                                             title="YouTube" 
-                                             frameBorder="0" 
-                                             allowFullScreen
-                                           />
-                                         </div>
-                                       </div>
-                                     )}
                                 </div>
                              </div>
 
@@ -1390,14 +1389,6 @@ const Portfolio: React.FC<PortfolioProps> = ({ lang, toggleLang }) => {
                                 className={`grid transition-[grid-template-rows] duration-700 ease-[cubic-bezier(0.25,1,0.5,1)] ${isTextOpen ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'}`}
                             >
                                 <div className="overflow-hidden">
-                                     <article className="text-base leading-relaxed text-left md:text-left md:text-balance mb-10">
-                                        {detailContent?.text && getLangString(detailContent.text)
-                                            .split('\n')
-                                            .filter(p => p.trim() !== '') 
-                                            .map((p, i) => (
-                                            <p key={i} className="mb-6 last:mb-0">{p}</p>
-                                        ))}
-                                     </article>
                                      {youtubeId && (
                                        <div className="relative w-full pt-[56.25%] bg-black mb-10">
                                            <iframe 
@@ -1409,6 +1400,14 @@ const Portfolio: React.FC<PortfolioProps> = ({ lang, toggleLang }) => {
                                            />
                                        </div>
                                      )}
+                                     <article className="text-base leading-relaxed text-left md:text-left md:text-balance mb-10">
+                                        {detailContent?.text && getLangString(detailContent.text)
+                                            .split('\n')
+                                            .filter(p => p.trim() !== '') 
+                                            .map((p, i) => (
+                                            <p key={i} className="mb-6 last:mb-0">{p}</p>
+                                        ))}
+                                     </article>
                                 </div>
                             </div>
 
