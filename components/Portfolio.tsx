@@ -102,6 +102,7 @@ const Portfolio: React.FC<PortfolioProps> = ({ lang, toggleLang }) => {
   const [showTestPanel, setShowTestPanel] = useState(false);
   const langHoldTimerRef = useRef<number | null>(null);
   const langLongPressRef = useRef(false);
+  const langToggleGuardRef = useRef(0);
   const COLOR_BOOST = { mult: 1.2, gamma: 1.2 };
   const [slideDirection, setSlideDirection] = useState<'next' | 'prev' | null>(null);
   const [particleOffset, setParticleOffset] = useState(0);
@@ -445,15 +446,23 @@ const Portfolio: React.FC<PortfolioProps> = ({ lang, toggleLang }) => {
       langHoldTimerRef.current = null;
     }
   };
+  const shouldToggleLang = () => {
+    const now = Date.now();
+    if (now - langToggleGuardRef.current < 400) return false;
+    langToggleGuardRef.current = now;
+    return true;
+  };
   const handleLangPointerUp = () => {
     clearLangHold();
     if (!langLongPressRef.current) {
+      if (!shouldToggleLang()) return;
       toggleLang();
     }
   };
   const handleLangTouchEnd = () => {
     clearLangHold();
     if (!langLongPressRef.current) {
+      if (!shouldToggleLang()) return;
       toggleLang();
     }
   };
@@ -491,6 +500,10 @@ const Portfolio: React.FC<PortfolioProps> = ({ lang, toggleLang }) => {
       if (langLongPressRef.current) { 
         e.preventDefault(); 
         return; 
+      }
+      if (!shouldToggleLang()) {
+        e.preventDefault();
+        return;
       }
       toggleLang();
     }
