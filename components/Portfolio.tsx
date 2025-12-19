@@ -305,9 +305,13 @@ const Portfolio: React.FC<PortfolioProps> = ({ lang, toggleLang }) => {
     const sliderImages = detailContent?.imagesA || detailContent?.images || [];
     const totalSlides = sliderImages.length;
     if (delta > threshold && totalSlides > 1) {
-      setSliderIndex((prev) => (prev - 1 + totalSlides) % totalSlides);
+      setSliderIndex((prev) => (
+        isMobile ? Math.max(0, prev - 1) : (prev - 1 + totalSlides) % totalSlides
+      ));
     } else if (delta < -threshold && totalSlides > 1) {
-      setSliderIndex((prev) => (prev + 1) % totalSlides);
+      setSliderIndex((prev) => (
+        isMobile ? Math.min(totalSlides - 1, prev + 1) : (prev + 1) % totalSlides
+      ));
     }
     mobileSlideStartX.current = null;
     mobileSlideCurrentX.current = null;
@@ -1161,7 +1165,7 @@ const Portfolio: React.FC<PortfolioProps> = ({ lang, toggleLang }) => {
                                           <div 
                                             ref={imageScrollRef}
                                             className="flex overflow-x-auto snap-x snap-mandatory scrollbar-hide scroll-smooth w-full h-full"
-                                            style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+                                            style={sliderContainerStyle}
                                             onScroll={handleSliderScroll}
                                             onTouchStart={(e) => handleMobileSlideStart(e.touches[0].clientX)}
                                             onTouchMove={(e) => handleMobileSlideMove(e.touches[0].clientX)}
@@ -1180,8 +1184,8 @@ const Portfolio: React.FC<PortfolioProps> = ({ lang, toggleLang }) => {
                                                 return (
                                                     <div 
                                                       key={idx} 
-                                                      className="w-full h-full flex-shrink-0 snap-start flex items-center justify-center bg-white"
-                                                      style={{ minWidth: '100%' }}
+                                                      className="h-full flex-shrink-0 snap-start flex items-center justify-center bg-white"
+                                                      style={sliderItemStyle}
                                                     >
                                                         <img 
                                                           src={displaySrc}
@@ -1518,7 +1522,7 @@ const Portfolio: React.FC<PortfolioProps> = ({ lang, toggleLang }) => {
             <div 
               ref={imageScrollRef}
               className="flex h-full w-full max-w-[85vw] max-h-[85vh] overflow-x-auto snap-x snap-mandatory scrollbar-hide"
-              style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+              style={sliderContainerStyle}
               onScroll={handleSliderScroll}
             >
               {sliderImages.map((img, idx) => {
@@ -1530,8 +1534,8 @@ const Portfolio: React.FC<PortfolioProps> = ({ lang, toggleLang }) => {
                 return (
                   <div 
                     key={idx} 
-                    className="flex-shrink-0 w-full h-full flex items-center justify-center snap-start"
-                    style={{ minWidth: '100%' }}
+                    className="flex-shrink-0 h-full flex items-center justify-center snap-start"
+                    style={sliderItemStyle}
                   >
                     <img 
                       src={displaySrc} 
