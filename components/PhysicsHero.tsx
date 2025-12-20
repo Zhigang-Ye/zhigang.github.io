@@ -734,6 +734,16 @@ const PhysicsHero: React.FC<PhysicsHeroProps> = ({ lang }) => {
     return style;
   };
 
+  const renderArrow = (direction: 'up' | 'down' | 'left' | 'right') => {
+    const style = getArrowStyle(direction);
+    if (!style.opacity) return null;
+    const iconProps = { size: 20, strokeWidth: 1.25 };
+    if (direction === 'up') return <div style={style} className="text-[#F22C2C]"><ChevronUp {...iconProps} /></div>;
+    if (direction === 'down') return <div style={style} className="text-[#F22C2C]"><ChevronDown {...iconProps} /></div>;
+    if (direction === 'right') return <div style={style} className="text-[#F22C2C]"><ChevronRight {...iconProps} /></div>;
+    return null;
+  };
+
   // Styles based on language
   const isChinese = lang === 'cn' || lang === 'tw';
   const textOpacity = isChinese ? 'opacity-20' : 'opacity-100';
@@ -748,15 +758,15 @@ const PhysicsHero: React.FC<PhysicsHeroProps> = ({ lang }) => {
   const textFont = isChinese ? {} : { fontFamily: '"Doto", sans-serif' };
 
   return (
-    <div className="w-full h-full relative group touch-none bg-white">
+    <div className="w-full h-full relative group touch-pan-y bg-white">
       {/* Centered Static Bio Display */}
-      <div className="absolute inset-0 z-0 pointer-events-none flex flex-col items-center justify-start md:justify-center pt-4 md:pt-0 px-8 animate-in fade-in duration-[3000ms]">
-         <div className="opacity-100 font-medium flex flex-col items-center max-w-2xl md:-translate-y-16 transition-opacity duration-1000">
+      <div className="absolute inset-0 z-20 flex flex-col items-center justify-start md:justify-center pt-4 md:pt-0 px-8 animate-in fade-in duration-[3000ms]">
+         <div className="opacity-100 font-medium flex flex-col items-center max-w-2xl md:-translate-y-16 transition-opacity duration-1000 select-text pointer-events-auto">
             {BIO_TEXT_DATA.map((paragraph, index) => (
                 <p 
                     key={index}
                     style={textFont} 
-                    className={`text-black text-center mb-4 leading-relaxed whitespace-pre-wrap tracking-wider ${textOpacity} ${textSize}`}
+                    className={`text-black text-center mb-4 leading-relaxed whitespace-pre-wrap tracking-wider ${textOpacity} ${textSize} select-text`}
                 >
                     {paragraph[lang]}
                 </p>
@@ -789,11 +799,7 @@ const PhysicsHero: React.FC<PhysicsHeroProps> = ({ lang }) => {
            }}
            className={`relative flex items-center justify-center ${isMobileView ? '' : 'flex-col'}`}
         >
-            {!isMobileView && (
-                <div style={getArrowStyle('up')} className="text-[#F22C2C]">
-                    <ChevronUp size={20} strokeWidth={1.25} />
-                </div>
-            )}
+            {!isMobileView && renderArrow('up')}
 
             <button 
                 onPointerDown={handlePointerDown}
@@ -819,22 +825,10 @@ const PhysicsHero: React.FC<PhysicsHeroProps> = ({ lang }) => {
             <span className="text-xl font-bold leading-none">T</span>
             </button>
 
-            {!isMobileView && (
-                <div style={getArrowStyle('down')} className="text-[#F22C2C]">
-                    <ChevronDown size={20} strokeWidth={1.25} />
-                </div>
-            )}
+            {!isMobileView && renderArrow('down')}
 
-            {isMobileView && (
-                <div style={getArrowStyle('right')} className="text-[#F22C2C]">
-                    <ChevronRight size={20} strokeWidth={1.25} />
-                </div>
-            )}
-             {isMobileView && (
-                <div style={getArrowStyle('down')} className="text-[#F22C2C]">
-                    <ChevronDown size={20} strokeWidth={1.25} />
-                </div>
-            )}
+            {isMobileView && renderArrow('right')}
+             {isMobileView && renderArrow('down')}
         </div>
       </div>
     </div>
