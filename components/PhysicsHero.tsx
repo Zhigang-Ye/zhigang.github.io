@@ -334,12 +334,11 @@ const PhysicsHero: React.FC<PhysicsHeroProps> = ({ lang }) => {
 
     addFallingText(0);
 
-    const mouse = Mouse.create(sceneRef.current);
+    const mouse = Mouse.create(render.canvas);
     const mouseConstraint = MouseConstraint.create(engine, {
       mouse: mouse,
       constraint: {
-        stiffness: 0.7,
-        damping: 0.15,
+        stiffness: 0.2,
         render: {
           visible: false
         }
@@ -348,7 +347,6 @@ const PhysicsHero: React.FC<PhysicsHeroProps> = ({ lang }) => {
 
     Composite.add(engine.world, mouseConstraint);
     render.mouse = mouse;
-    render.canvas.style.pointerEvents = 'none';
 
     const FADE_DURATION = 10000; 
 
@@ -760,7 +758,7 @@ const PhysicsHero: React.FC<PhysicsHeroProps> = ({ lang }) => {
   const textFont = isChinese ? {} : { fontFamily: '"Doto", sans-serif' };
 
   return (
-    <div className="w-full h-full relative group touch-auto bg-white">
+    <div className="w-full h-full relative group touch-none bg-white">
       {/* Centered Static Bio Display */}
       <div className="absolute inset-0 z-0 pointer-events-none flex flex-col items-center justify-start md:justify-center pt-4 md:pt-0 px-8 animate-in fade-in duration-[3000ms]">
          <div className="opacity-100 font-medium flex flex-col items-center max-w-2xl md:-translate-y-16 transition-opacity duration-1000">
@@ -778,7 +776,7 @@ const PhysicsHero: React.FC<PhysicsHeroProps> = ({ lang }) => {
       
       <div 
         ref={sceneRef} 
-        className="absolute inset-0 z-10 w-full h-full cursor-default active:cursor-grabbing overflow-hidden touch-auto"
+        className="absolute inset-0 z-10 w-full h-full cursor-grab active:cursor-grabbing overflow-hidden touch-none"
         aria-label="Interactive falling letters spelling ZHIGANGYE"
       />
       
