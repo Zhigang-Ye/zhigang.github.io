@@ -734,16 +734,6 @@ const PhysicsHero: React.FC<PhysicsHeroProps> = ({ lang }) => {
     return style;
   };
 
-  const renderArrow = (direction: 'up' | 'down' | 'left' | 'right') => {
-    const style = getArrowStyle(direction);
-    if (!style.opacity) return null;
-    const iconProps = { size: 20, strokeWidth: 1.25 };
-    if (direction === 'up') return <div style={style} className="text-[#F22C2C]"><ChevronUp {...iconProps} /></div>;
-    if (direction === 'down') return <div style={style} className="text-[#F22C2C]"><ChevronDown {...iconProps} /></div>;
-    if (direction === 'right') return <div style={style} className="text-[#F22C2C]"><ChevronRight {...iconProps} /></div>;
-    return null;
-  };
-
   // Styles based on language
   const isChinese = lang === 'cn' || lang === 'tw';
   const textOpacity = isChinese ? 'opacity-20' : 'opacity-100';
@@ -774,7 +764,7 @@ const PhysicsHero: React.FC<PhysicsHeroProps> = ({ lang }) => {
          </div>
       </div>
       
-      <div 
+       <div 
         ref={sceneRef} 
         className="absolute inset-0 z-10 w-full h-full cursor-grab active:cursor-grabbing overflow-hidden touch-none"
         aria-label="Interactive falling letters spelling ZHIGANGYE"
@@ -799,7 +789,11 @@ const PhysicsHero: React.FC<PhysicsHeroProps> = ({ lang }) => {
            }}
            className={`relative flex items-center justify-center ${isMobileView ? '' : 'flex-col'}`}
         >
-            {!isMobileView && renderArrow('up')}
+            {!isMobileView && (
+                <div style={getArrowStyle('up')} className="text-[#F22C2C]">
+                    <ChevronUp size={20} strokeWidth={1.25} />
+                </div>
+            )}
 
             <button 
                 onPointerDown={handlePointerDown}
@@ -825,10 +819,22 @@ const PhysicsHero: React.FC<PhysicsHeroProps> = ({ lang }) => {
             <span className="text-xl font-bold leading-none">T</span>
             </button>
 
-            {!isMobileView && renderArrow('down')}
+            {!isMobileView && (
+                <div style={getArrowStyle('down')} className="text-[#F22C2C]">
+                    <ChevronDown size={20} strokeWidth={1.25} />
+                </div>
+            )}
 
-            {isMobileView && renderArrow('right')}
-             {isMobileView && renderArrow('down')}
+            {isMobileView && (
+                <div style={getArrowStyle('right')} className="text-[#F22C2C]">
+                    <ChevronRight size={20} strokeWidth={1.25} />
+                </div>
+            )}
+             {isMobileView && (
+                <div style={getArrowStyle('down')} className="text-[#F22C2C]">
+                    <ChevronDown size={20} strokeWidth={1.25} />
+                </div>
+            )}
         </div>
       </div>
     </div>
