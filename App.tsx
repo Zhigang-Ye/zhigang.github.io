@@ -10,7 +10,7 @@ import { ViewState, Lang } from './types';
 import { TRANSLATIONS, FONTS_EN, FONTS_CN, FONTS_TW } from './constants';
 
 const App: React.FC = () => {
-  const [currentView, setCurrentView] = useState<ViewState>('PORTFOLIO');
+  const [currentView, setCurrentView] = useState<ViewState>('ABOUT');
   const [lang, setLang] = useState<Lang>('en');
 
   // Font State - Separate indices for each language
