@@ -766,7 +766,7 @@ const PhysicsHero: React.FC<PhysicsHeroProps> = ({ lang }) => {
       
        <div 
         ref={sceneRef} 
-        className="absolute inset-0 z-10 w-full h-full cursor-grab active:cursor-grabbing overflow-hidden touch-none"
+        className="absolute inset-0 z-10 w-full h-full overflow-hidden touch-none"
         aria-label="Interactive falling letters spelling ZHIGANGYE"
       />
       
