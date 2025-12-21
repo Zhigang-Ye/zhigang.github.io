@@ -1472,7 +1472,7 @@ const Portfolio: React.FC<PortfolioProps> = ({ lang, toggleLang }) => {
                 className={`h-full relative bg-white overflow-hidden flex flex-col justify-center items-center
                     flex-1
                 `}
-                style={{ padding: '1.5vh' }}
+                style={{ padding: '1vh' }}
             >
                 
                 {/* Language Toggle fixed to screen bottom right */}
@@ -1536,7 +1536,7 @@ const Portfolio: React.FC<PortfolioProps> = ({ lang, toggleLang }) => {
         >
             <div 
               ref={imageScrollRef}
-              className="flex h-full w-full max-w-[85vw] max-h-[85vh] overflow-x-auto snap-x snap-mandatory scrollbar-hide"
+              className="flex h-full w-full max-w-[92vw] max-h-[92vh] overflow-x-auto snap-x snap-mandatory scrollbar-hide"
               style={sliderContainerStyle}
               onScroll={handleSliderScroll}
             >
