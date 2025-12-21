@@ -7,6 +7,14 @@
   body {
     @apply bg-white text-primary font-sans overflow-x-hidden antialiased;
   }
+
+  :focus {
+    outline: none;
+  }
+
+  :focus-visible {
+    outline: none;
+  }
   
   /* Hide scrollbar for clean look */
   ::-webkit-scrollbar {
