@@ -1,6 +1,6 @@
 
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { ArrowLeft, ArrowRight } from 'lucide-react';
 import { TextEntry, MultiLangString, TextSection, Lang } from '../types';
 import { TRANSLATIONS, Quote } from '../constants';
@@ -9,6 +9,8 @@ interface TextProps {
   lang: Lang;
   isScrolling: boolean;
   setBottomNavVisible: (visible: boolean) => void;
+  activeSlug?: string | null;
+  onSlugChange?: (slug: string | null) => void;
 }
 
 interface Manifest {
@@ -21,7 +23,40 @@ interface Manifest {
   };
 }
 
-const Text: React.FC<TextProps> = ({ lang, isScrolling, setBottomNavVisible }) => {
+type OpenEntryOptions = {
+  fromRoute?: boolean;
+};
+
+const normalizeSlug = (value: string) =>
+  value
+    .toLowerCase()
+    .trim()
+    .replace(/['’"]/g, '')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+
+const getEntryTitleForSlug = (entry: TextEntry) =>
+  entry.title?.en || entry.title?.cn || entry.title?.tw || entry.id;
+
+const getEntrySlug = (entry: TextEntry) => {
+  const slug = normalizeSlug(getEntryTitleForSlug(entry));
+  return slug || entry.id;
+};
+
+const matchesSlug = (entry: TextEntry, slug: string) => {
+  const normalized = normalizeSlug(slug);
+  if (!normalized) return false;
+  if (normalized === normalizeSlug(getEntryTitleForSlug(entry))) return true;
+  return normalized === normalizeSlug(entry.id);
+};
+
+const Text: React.FC<TextProps> = ({
+  lang,
+  isScrolling,
+  setBottomNavVisible,
+  activeSlug = null,
+  onSlugChange
+}) => {
   const [sections, setSections] = useState<TextSection[]>([]);
   const [selectedEntry, setSelectedEntry] = useState<TextEntry | null>(null);
   const [loading, setLoading] = useState(true);
@@ -165,6 +200,13 @@ const Text: React.FC<TextProps> = ({ lang, isScrolling, setBottomNavVisible }) =
     return () => setBottomNavVisible(false);
   }, [setBottomNavVisible]);
 
+  const openEntry = useCallback((entry: TextEntry, options?: OpenEntryOptions) => {
+    if (!options?.fromRoute) {
+      onSlugChange?.(getEntrySlug(entry));
+    }
+    setSelectedEntry(entry);
+  }, [onSlugChange]);
+
   const toggleSection = (index: number) => {
     setOpenSections(prev => ({
       ...prev,
@@ -195,6 +237,27 @@ const Text: React.FC<TextProps> = ({ lang, isScrolling, setBottomNavVisible }) =
     if (!dateStr) return '';
     return dateStr.replace(/-/g, '.');
   };
+
+  useEffect(() => {
+    if (!activeSlug) {
+      if (selectedEntry) {
+        setSelectedEntry(null);
+      }
+      return;
+    }
+    if (sections.length === 0) return;
+    const entries = sections.flatMap((section) => section.items);
+    const match = entries.find((entry) => matchesSlug(entry, activeSlug));
+    if (!match) {
+      if (selectedEntry) {
+        setSelectedEntry(null);
+      }
+      return;
+    }
+    if (!selectedEntry || selectedEntry.id !== match.id) {
+      setSelectedEntry(match);
+    }
+  }, [activeSlug, sections, selectedEntry]);
 
   const secondaryStyle = { fontFamily: '"Doto", sans-serif' };
   const secondaryClass = "text-[#F22C2C]";
@@ -227,7 +290,10 @@ const Text: React.FC<TextProps> = ({ lang, isScrolling, setBottomNavVisible }) =
             className={`fixed top-24 left-6 md:top-32 md:left-12 z-40 transition-opacity duration-700 ease-in-out ${!isScrolling ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
           >
              <button 
-              onClick={() => setSelectedEntry(null)}
+              onClick={() => {
+                setSelectedEntry(null);
+                onSlugChange?.(null);
+              }}
               className="flex items-center text-sm bg-white/90 backdrop-blur px-3 py-1 border border-black hover:bg-black hover:text-white transition-colors"
             >
               <ArrowLeft size={16} className="mr-2" />
@@ -270,7 +336,7 @@ const Text: React.FC<TextProps> = ({ lang, isScrolling, setBottomNavVisible }) =
           >
             {prevEntry ? (
               <button 
-                onClick={() => setSelectedEntry(prevEntry)}
+                onClick={() => openEntry(prevEntry)}
                 className="group flex items-center text-black hover:text-[#F22C2C] transition-colors"
               >
                 <ArrowLeft size={16} className="mr-2 transition-transform group-hover:-translate-x-1 flex-shrink-0" />
@@ -285,7 +351,7 @@ const Text: React.FC<TextProps> = ({ lang, isScrolling, setBottomNavVisible }) =
 
             {nextEntry && (
               <button 
-                onClick={() => setSelectedEntry(nextEntry)}
+                onClick={() => openEntry(nextEntry)}
                 className="group flex items-center text-black hover:text-[#F22C2C] transition-colors text-right"
               >
                 <div className="flex flex-col items-end mr-2 min-w-0">
@@ -362,7 +428,7 @@ const Text: React.FC<TextProps> = ({ lang, isScrolling, setBottomNavVisible }) =
                         section.items.map((entry) => (
                           <div 
                             key={entry.id}
-                            onClick={() => setSelectedEntry(entry)}
+                            onClick={() => openEntry(entry)}
                             className="cursor-pointer group/item flex items-baseline justify-between hover:text-[#F22C2C] transition-colors duration-200"
                           >
                             <span className="text-base">{getLangString(entry.title)}</span>

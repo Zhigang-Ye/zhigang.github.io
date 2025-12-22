@@ -8,6 +8,8 @@ import { TRANSLATIONS } from '../constants';
 interface PortfolioProps {
   lang: Lang;
   toggleLang: () => void;
+  activeSlug?: string | null;
+  onSlugChange?: (slug: string | null) => void;
 }
 
 interface ProjectDetailData {
@@ -34,7 +36,25 @@ interface GalleryRow {
   images: MeasuredImage[];
 }
 
-const Portfolio: React.FC<PortfolioProps> = ({ lang, toggleLang }) => {
+type OpenProjectOptions = {
+  fromRoute?: boolean;
+};
+
+const normalizeSlug = (value: string) => value.toLowerCase().replace(/[^a-z0-9]+/g, '');
+
+const getProjectSlug = (project: Project) => {
+  const normalized = normalizeSlug(project.title?.en || project.id || '');
+  return normalized || project.id;
+};
+
+const matchesSlug = (project: Project, slug: string) => {
+  const normalized = normalizeSlug(slug);
+  if (!normalized) return false;
+  if (normalized === normalizeSlug(project.title?.en || '')) return true;
+  return normalized === normalizeSlug(project.id || '');
+};
+
+const Portfolio: React.FC<PortfolioProps> = ({ lang, toggleLang, activeSlug = null, onSlugChange }) => {
   const MOBILE_SIDE_PADDING = 12; // px, keep image and nav aligned on mobile
 
   const [projects, setProjects] = useState<Project[]>([]);
@@ -337,19 +357,19 @@ const Portfolio: React.FC<PortfolioProps> = ({ lang, toggleLang }) => {
   };
 
   // Build low-res paths from generated C folder
-  const getLowResAUrl = (project: Project | null, img: string) => {
+  const getLowResAUrl = useCallback((project: Project | null, img: string) => {
     if (!project?.folderPath) return img;
     if (img.startsWith('http') || img.startsWith('/')) return img;
     const base = img.split('/').pop()?.split('.').slice(0, -1).join('.') || 'image';
     return `${project.folderPath}/C/${base}.jpg`;
-  };
+  }, []);
 
-  const getLowResBUrl = (project: Project | null, img: string) => {
+  const getLowResBUrl = useCallback((project: Project | null, img: string) => {
     if (!project?.folderPath) return img;
     if (img.startsWith('http') || img.startsWith('/')) return img;
     const base = img.split('/').pop()?.split('.').slice(0, -1).join('.') || 'image';
     return `${project.folderPath}/C/B/${base}.jpg`;
-  };
+  }, []);
 
   const handleNext = () => {
     setSlideDirection('next');
@@ -526,8 +546,11 @@ const Portfolio: React.FC<PortfolioProps> = ({ lang, toggleLang }) => {
   };
 
   // --- Project Open Logic ---
-  const handleProjectClick = async (project: Project) => {
-    if (isDraggingRef.current) return;
+  const handleProjectClick = useCallback(async (project: Project, options?: OpenProjectOptions) => {
+    if (!options?.fromRoute && isDraggingRef.current) return;
+    if (!options?.fromRoute) {
+      onSlugChange?.(getProjectSlug(project));
+    }
 
     setSelectedProject(project);
     setDetailLoading(true);
@@ -688,14 +711,39 @@ const Portfolio: React.FC<PortfolioProps> = ({ lang, toggleLang }) => {
     } finally {
         setDetailLoading(false);
     }
-  };
+  }, [getLowResBUrl, onSlugChange]);
 
-  const handleBack = () => {
+  const closeProject = useCallback(() => {
     setSelectedProject(null);
     setDetailContent(null);
     setThumbDims([]);
     setGalleryRows([]);
+  }, []);
+
+  const handleBack = () => {
+    closeProject();
+    onSlugChange?.(null);
   };
+
+  useEffect(() => {
+    if (!activeSlug) {
+      if (selectedProject) {
+        closeProject();
+      }
+      return;
+    }
+    if (projects.length === 0) return;
+    const match = projects.find((project) => matchesSlug(project, activeSlug));
+    if (!match) {
+      if (selectedProject) {
+        closeProject();
+      }
+      return;
+    }
+    if (!selectedProject || selectedProject.id !== match.id) {
+      handleProjectClick(match, { fromRoute: true });
+    }
+  }, [activeSlug, projects, selectedProject, closeProject, handleProjectClick]);
 
   const scrollImages = (direction: 'left' | 'right') => {
     if (imageScrollRef.current) {

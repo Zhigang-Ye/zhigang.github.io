@@ -1,5 +1,6 @@
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import Navigation from './components/Navigation';
 import PhysicsHero from './components/PhysicsHero';
 import Portfolio from './components/Portfolio';
@@ -11,7 +12,11 @@ import { TRANSLATIONS, FONTS_EN, FONTS_CN, FONTS_TW } from './constants';
 
 const App: React.FC = () => {
   const [currentView, setCurrentView] = useState<ViewState>('ABOUT');
+  const [portfolioSlug, setPortfolioSlug] = useState<string | null>(null);
+  const [textSlug, setTextSlug] = useState<string | null>(null);
   const [lang, setLang] = useState<Lang>('en');
+  const location = useLocation();
+  const navigate = useNavigate();
 
   // Font State - Separate indices for each language
   // Initialize EN font to 0 (Inter) as default per request
@@ -94,6 +99,31 @@ const App: React.FC = () => {
     setIsTextBottomNavVisible(false);
   }, [currentView]);
 
+  useEffect(() => {
+    const path = location.pathname.replace(/\/+$/, '') || '/';
+    if (path.startsWith('/portfolio')) {
+      setCurrentView('PORTFOLIO');
+      setPortfolioSlug(path.split('/')[2] || null);
+      setTextSlug(null);
+      return;
+    }
+    if (path.startsWith('/text')) {
+      setCurrentView('TEXT');
+      setPortfolioSlug(null);
+      setTextSlug(path.split('/')[2] || null);
+      return;
+    }
+    if (path.startsWith('/biography')) {
+      setCurrentView('BIOGRAPHY');
+      setPortfolioSlug(null);
+      setTextSlug(null);
+      return;
+    }
+    setCurrentView('ABOUT');
+    setPortfolioSlug(null);
+    setTextSlug(null);
+  }, [location.pathname]);
+
   // Apply Font Strategy
   useEffect(() => {
     let selectedFont = '';
@@ -126,13 +156,22 @@ const App: React.FC = () => {
       case 'ABOUT':
         return <PhysicsHero lang={lang} />;
       case 'PORTFOLIO':
-        return <Portfolio lang={lang} toggleLang={toggleLang} />;
+        return (
+          <Portfolio
+            lang={lang}
+            toggleLang={toggleLang}
+            activeSlug={portfolioSlug}
+            onSlugChange={handlePortfolioSlugChange}
+          />
+        );
       case 'TEXT':
         return (
           <Text 
             lang={lang} 
             isScrolling={isScrolling} 
-            setBottomNavVisible={setIsTextBottomNavVisible} 
+            setBottomNavVisible={setIsTextBottomNavVisible}
+            activeSlug={textSlug}
+            onSlugChange={handleTextSlugChange}
           />
         );
       case 'BIOGRAPHY':
@@ -152,9 +191,39 @@ const App: React.FC = () => {
   
   const showFloatingButtons = showControls && !isScrolling && !isTextBottomNavVisible && !isMobilePortfolio;
 
+  const handleViewChange = useCallback((view: ViewState) => {
+    if (view === 'ABOUT') {
+      navigate('/');
+      return;
+    }
+    if (view === 'PORTFOLIO') {
+      navigate('/portfolio');
+      return;
+    }
+    if (view === 'TEXT') {
+      navigate('/text');
+      return;
+    }
+    navigate('/biography');
+  }, [navigate]);
+
+  const handlePortfolioSlugChange = useCallback((slug: string | null) => {
+    const target = slug ? `/portfolio/${slug}` : '/portfolio';
+    if (location.pathname !== target) {
+      navigate(target);
+    }
+  }, [location.pathname, navigate]);
+
+  const handleTextSlugChange = useCallback((slug: string | null) => {
+    const target = slug ? `/text/${slug}` : '/text';
+    if (location.pathname !== target) {
+      navigate(target);
+    }
+  }, [location.pathname, navigate]);
+
   return (
     <div className="h-[100dvh] w-full flex flex-col text-black bg-white overflow-hidden selection:bg-black selection:text-white relative">
-      <Navigation currentView={currentView} onChangeView={setCurrentView} lang={lang} />
+      <Navigation currentView={currentView} onChangeView={handleViewChange} lang={lang} />
       
       <main className="flex-grow relative pt-20 md:pt-24 h-full overflow-hidden max-h-[120dvh]">
         <div 
