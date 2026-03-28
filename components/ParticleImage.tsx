@@ -36,7 +36,7 @@ export interface ParticleImageProps {
   gap?: number;
   dotRadius?: number;
   jitterSampling?: boolean;
-  varyParticleSize?: boolean;
+  sizeMix?: number;
   directionalFlow?: boolean;
   onImageLoaded?: () => void;
   style?: React.CSSProperties;
@@ -63,9 +63,20 @@ const hashNoise = (x: number, y: number, seed: number) => {
   return raw - Math.floor(raw);
 };
 
-const getDepthScaledRadius = (r: number, g: number, b: number, dotRadius: number) => {
+const getDepthScaledRadius = (
+  r: number,
+  g: number,
+  b: number,
+  dotRadius: number,
+  sizeMix: number
+) => {
+  if (sizeMix <= 0.01) return dotRadius;
   const luminance = (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255;
-  const depthScale = clamp(1.24 - luminance * 0.42, 0.82, 1.24);
+  const depthScale = clamp(
+    1 + (0.5 - luminance) * sizeMix * 1.5,
+    Math.max(0.22, 1 - sizeMix * 0.55),
+    1 + sizeMix * 0.75
+  );
   return dotRadius * depthScale;
 };
 
@@ -193,7 +204,7 @@ const ParticleImage: React.FC<ParticleImageProps> = ({
   gap = 6, // Default gap set to 6px for the specific dense grid look
   dotRadius = 2.8,
   jitterSampling = true,
-  varyParticleSize = true,
+  sizeMix = 1,
   directionalFlow = true,
   onImageLoaded,
   style,
@@ -292,8 +303,10 @@ const ParticleImage: React.FC<ParticleImageProps> = ({
       const flowDirection = directionalFlow
         ? (slideDirection === 'next' ? -1 : slideDirection === 'prev' ? 1 : 0)
         : 0;
-      const directionalImpulse = flowDirection * (gap * 1.2 + 6);
+      const hasDirectionalFlow = directionalFlow && flowDirection !== 0;
+      const directionalImpulse = hasDirectionalFlow ? flowDirection * (gap * 4 + 18) : 0;
       const offscreenPadding = Math.max(36, gap * 8);
+      const neutralSpawnSpread = Math.max(10, gap * 1.3);
 
       const maxLen = Math.max(currentParticles.length, targetPoints.length);
 
@@ -304,11 +317,12 @@ const ParticleImage: React.FC<ParticleImageProps> = ({
         // Physics Tuning
         const friction = 0.50 + Math.random() * 0.10; 
         const ease = 0.20 + Math.random() * 0.10;
-        const depthBaseRadius = varyParticleSize && target
-          ? getDepthScaledRadius(target.r, target.g, target.b, dotRadius)
+        const depthBaseRadius = target
+          ? getDepthScaledRadius(target.r, target.g, target.b, dotRadius, sizeMix)
           : dotRadius;
-        const randRadius = varyParticleSize
-          ? depthBaseRadius * (0.9 + Math.random() * 0.55)
+        const sizeVariance = sizeMix > 0.01 ? sizeMix * 0.42 : 0;
+        const randRadius = sizeMix > 0.01
+          ? depthBaseRadius * clamp(1 + (Math.random() - 0.5) * sizeVariance, 0.55, 1.95)
           : dotRadius;
 
         if (existing && target) {
@@ -324,26 +338,37 @@ const ParticleImage: React.FC<ParticleImageProps> = ({
           existing.radius = depthBaseRadius;
           existing.radiusVar = randRadius;
           existing.isMoving = true;
-          
-          existing.vx += directionalImpulse + (Math.random() - 0.5) * 2;
-          existing.vy += (Math.random() - 0.5) * Math.max(2, gap * 0.4);
+
+          existing.vx += hasDirectionalFlow
+            ? directionalImpulse + (Math.random() - 0.5) * Math.max(4, gap)
+            : (Math.random() - 0.5) * 0.5;
+          existing.vy += hasDirectionalFlow
+            ? (Math.random() - 0.5) * Math.max(8, gap * 1.2)
+            : (Math.random() - 0.5) * 0.5;
 
           nextParticles.push(existing);
         } else if (target && !existing) {
           // Spawn from the incoming side to make next/prev navigation legible.
+          const targetX = containerLeft + target.u * containerWidth;
           const targetY = containerTop + target.v * containerHeight;
-          const startX = flowDirection < 0
+          const startX = hasDirectionalFlow
+            ? (flowDirection < 0
             ? containerLeft + containerWidth + offscreenPadding + Math.random() * offscreenPadding
             : flowDirection > 0
               ? containerLeft - offscreenPadding - Math.random() * offscreenPadding
-              : centerX + (Math.random() - 0.5) * 40;
-          const startY = targetY + (Math.random() - 0.5) * Math.max(10, gap * 3);
+              : centerX + (Math.random() - 0.5) * 40)
+            : targetX + (Math.random() - 0.5) * neutralSpawnSpread;
+          const startY = targetY + (Math.random() - 0.5) * (hasDirectionalFlow ? Math.max(14, gap * 4) : neutralSpawnSpread);
           
           nextParticles.push({
             x: startX,
             y: startY,
-            vx: directionalImpulse * 0.45 + (Math.random() - 0.5) * 1.5, 
-            vy: (Math.random() - 0.5) * 1.5,
+            vx: hasDirectionalFlow
+              ? directionalImpulse * 0.65 + (Math.random() - 0.5) * 2
+              : (Math.random() - 0.5) * 0.35,
+            vy: hasDirectionalFlow
+              ? (Math.random() - 0.5) * 2.2
+              : (Math.random() - 0.5) * 0.35,
             r: target.r,
             g: target.g,
             b: target.b,
@@ -363,8 +388,12 @@ const ParticleImage: React.FC<ParticleImageProps> = ({
         } else if (existing && !target) {
           // Kill old
           existing.targetA = 0;
-          existing.vx += directionalImpulse + (Math.random() - 0.5) * 2;
-          existing.vy += (Math.random() - 0.5) * Math.max(2, gap * 0.5);
+          existing.vx += hasDirectionalFlow
+            ? directionalImpulse + (Math.random() - 0.5) * Math.max(4, gap)
+            : (Math.random() - 0.5) * 0.5;
+          existing.vy += hasDirectionalFlow
+            ? (Math.random() - 0.5) * Math.max(8, gap * 1.1)
+            : (Math.random() - 0.5) * 0.5;
           nextParticles.push(existing);
         }
       }
@@ -376,7 +405,7 @@ const ParticleImage: React.FC<ParticleImageProps> = ({
     processTransition();
 
     return () => { isMounted = false; };
-  }, [src, layoutReady, gap, dotRadius, jitterSampling, varyParticleSize, directionalFlow, onImageLoaded]);
+  }, [src, layoutReady, gap, dotRadius, jitterSampling, sizeMix, directionalFlow, onImageLoaded]);
 
 
   // --- Animation Loop ---

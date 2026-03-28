@@ -40,6 +40,17 @@ type OpenProjectOptions = {
   fromRoute?: boolean;
 };
 
+const PARTICLE_PRESETS = [
+  { gap: 2.5, radius: 1.7 },
+  { gap: 7.5, radius: 4.0 },
+  { gap: 10, radius: 2.8 },
+  { gap: 6, radius: 2.8 },
+  { gap: 4, radius: 1.8 },
+];
+
+const pickParticlePreset = () =>
+  PARTICLE_PRESETS[Math.floor(Math.random() * PARTICLE_PRESETS.length)];
+
 const normalizeSlug = (value: string) => value.toLowerCase().replace(/[^a-z0-9]+/g, '');
 
 const getProjectSlug = (project: Project) => {
@@ -116,10 +127,15 @@ const Portfolio: React.FC<PortfolioProps> = ({ lang, toggleLang, activeSlug = nu
   const [isMobile, setIsMobile] = useState(false);
 
   // Particle tweak controls (temporary UI)
-  const [particleGap, setParticleGap] = useState(6);
-  const [particleDotRadius, setParticleDotRadius] = useState(2.8);
+  const initialParticlePresetRef = useRef<{ gap: number; radius: number } | null>(null);
+  if (!initialParticlePresetRef.current) {
+    initialParticlePresetRef.current = pickParticlePreset();
+  }
+
+  const [particleGap, setParticleGap] = useState(initialParticlePresetRef.current.gap);
+  const [particleDotRadius, setParticleDotRadius] = useState(initialParticlePresetRef.current.radius);
   const [particleJitterSampling, setParticleJitterSampling] = useState(true);
-  const [particleVarySize, setParticleVarySize] = useState(true);
+  const [particleSizeMix, setParticleSizeMix] = useState(1);
   const [particleDirectionalFlow, setParticleDirectionalFlow] = useState(true);
   const [fpIndexMap, setFpIndexMap] = useState<Record<string, number>>({});
   const [showTestPanel, setShowTestPanel] = useState(false);
@@ -142,20 +158,6 @@ const Portfolio: React.FC<PortfolioProps> = ({ lang, toggleLang, activeSlug = nu
     width: 'calc(100% - var(--slide-gap))',
     minWidth: 'calc(100% - var(--slide-gap))'
   } as React.CSSProperties;
-
-  // Randomize particle defaults between legacy and newer presets on project change.
-  useEffect(() => {
-    const presets = [
-      { gap: 2.5, radius: 1.7 },
-      { gap: 7.5, radius: 4.0 },
-      { gap: 10, radius: 2.8 },
-      { gap: 6, radius: 2.8 },
-      { gap: 4, radius: 1.8 },
-    ];
-    const pick = presets[Math.floor(Math.random() * presets.length)];
-    setParticleGap(pick.gap);
-    setParticleDotRadius(pick.radius);
-  }, [displayIndex]);
 
   useEffect(() => {
     const checkMobile = () => {
@@ -1704,18 +1706,18 @@ const Portfolio: React.FC<PortfolioProps> = ({ lang, toggleLang, activeSlug = nu
         "
       >
         <div className="absolute inset-0 pointer-events-none" />
-        {!isMobile && (
+        <div className="absolute bottom-4 left-4 z-30 flex flex-col items-start gap-2 pointer-events-auto">
           <button
+            type="button"
             onClick={() => setShowTestPanel((prev) => !prev)}
             title={lang === 'en' ? 'Particle settings' : '粒子设置'}
-            className="absolute bottom-4 left-4 z-30 w-9 h-9 flex items-center justify-center text-xs border border-black bg-white/90 backdrop-blur hover:bg-black hover:text-white transition-colors rounded-full shadow-sm"
+            className="px-3 py-2 text-[10px] uppercase tracking-[0.24em] border border-black bg-white/92 backdrop-blur hover:bg-black hover:text-white transition-colors rounded-full shadow-sm"
           >
-            ⚙
+            {showTestPanel ? (lang === 'en' ? 'Close Panel' : '关闭面板') : 'Particle'}
           </button>
-        )}
         {/* TEMP Controls (hidden by default) */}
         {showTestPanel && (
-          <div className="absolute bottom-4 left-4 z-30 bg-white/90 backdrop-blur shadow-md border border-black/10 rounded-lg p-3 flex flex-col gap-2 text-xs max-w-[240px]">
+          <div className="bg-white/92 backdrop-blur shadow-md border border-black/10 rounded-lg p-3 flex flex-col gap-2 text-xs w-[min(280px,calc(100vw-2rem))] max-h-[70vh] overflow-y-auto">
               <div className="flex items-center justify-between">
                 <div className="font-semibold text-[11px]">
                   {lang === 'en' ? 'Particle Panel' : '粒子测试面板'}
@@ -1771,27 +1773,21 @@ const Portfolio: React.FC<PortfolioProps> = ({ lang, toggleLang, activeSlug = nu
                   </button>
                 </div>
               </div>
-              <div className="flex items-center gap-2">
+              <label className="flex items-center gap-2">
                 <span className="w-14">
-                  {lang === 'en' ? 'Size Mix' : '大小'}
+                  {lang === 'en' ? 'Size Mix' : '混合'}
                 </span>
-                <div className="flex-1 flex gap-1">
-                  <button
-                    type="button"
-                    onClick={() => setParticleVarySize(true)}
-                    className={`flex-1 px-2 py-1 border rounded transition-colors ${particleVarySize ? 'bg-black text-white border-black' : 'bg-white text-black border-black/20 hover:border-black'}`}
-                  >
-                    {lang === 'en' ? 'Varied' : '不一'}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setParticleVarySize(false)}
-                    className={`flex-1 px-2 py-1 border rounded transition-colors ${!particleVarySize ? 'bg-black text-white border-black' : 'bg-white text-black border-black/20 hover:border-black'}`}
-                  >
-                    {lang === 'en' ? 'Uniform' : '一致'}
-                  </button>
-                </div>
-              </div>
+                <input
+                  type="range"
+                  min={0}
+                  max={1.8}
+                  step={0.05}
+                  value={particleSizeMix}
+                  onChange={(e) => setParticleSizeMix(parseFloat(e.target.value))}
+                  className="flex-1"
+                />
+                <span className="w-8 text-right">{particleSizeMix.toFixed(1)}</span>
+              </label>
               <div className="flex items-center gap-2">
                 <span className="w-14">
                   {lang === 'en' ? 'Flow' : '流向'}
@@ -1825,6 +1821,7 @@ const Portfolio: React.FC<PortfolioProps> = ({ lang, toggleLang, activeSlug = nu
               ) : null}
           </div>
         )}
+        </div>
         <div 
             className={`flex flex-col gap-2 cursor-pointer group w-min relative transition-all duration-300
               ${isMobile ? 'items-center w-full' : 'items-center'}
@@ -1837,7 +1834,7 @@ const Portfolio: React.FC<PortfolioProps> = ({ lang, toggleLang, activeSlug = nu
                 gap={particleGap}
                 dotRadius={particleDotRadius}
                 jitterSampling={particleJitterSampling}
-                varyParticleSize={particleVarySize}
+                sizeMix={particleSizeMix}
                 directionalFlow={particleDirectionalFlow}
                 slideDirection={slideDirection}
                 colorBoost={COLOR_BOOST}
