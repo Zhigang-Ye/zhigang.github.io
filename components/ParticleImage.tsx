@@ -51,6 +51,15 @@ export interface SampledData {
 
 const sampleCache: Record<string, SampledData> = {};
 
+const clamp = (value: number, min: number, max: number) => {
+  return Math.min(max, Math.max(min, value));
+};
+
+const hashNoise = (x: number, y: number, seed: number) => {
+  const raw = Math.sin(x * 12.9898 + y * 78.233 + seed * 37.719) * 43758.5453123;
+  return raw - Math.floor(raw);
+};
+
 /**
  * Prefetches and samples particle data for an image.
  * Uses a global cache to avoid re-sampling the same image at the same width.
@@ -105,21 +114,36 @@ export const prefetchParticleImage = (
           const imageData = ctx.getImageData(0, 0, width, height).data;
           const points = [];
 
-          // Sample center of grid cells
+          // Sample near the center of each cell, but with a deterministic jitter
+          // so the image keeps a minimal feel without reading as a rigid LED grid.
           const offset = gap / 2;
+          const jitterSpan = gap * 0.42;
 
           for (let y = 0; y < height; y += gap) {
             for (let x = 0; x < width; x += gap) {
                 if (x >= width || y >= height) continue;
 
-                const index = (Math.floor(y) * width + Math.floor(x)) * 4;
+                const baseX = x + offset;
+                const baseY = y + offset;
+                const sampleX = clamp(
+                  Math.round(baseX + (hashNoise(x, y, 1) - 0.5) * jitterSpan),
+                  0,
+                  width - 1
+                );
+                const sampleY = clamp(
+                  Math.round(baseY + (hashNoise(x, y, 2) - 0.5) * jitterSpan),
+                  0,
+                  height - 1
+                );
+
+                const index = (sampleY * width + sampleX) * 4;
                 const a = imageData[index + 3];
 
                 if (a > 100) { 
                   points.push({
                       // Store Normalized Coordinates (0.0 to 1.0)
-                      u: (x + offset) / width, 
-                      v: (y + offset) / height,
+                      u: (sampleX + 0.5) / width, 
+                      v: (sampleY + 0.5) / height,
                       r: imageData[index], 
                       g: imageData[index + 1], 
                       b: imageData[index + 2]
@@ -151,7 +175,8 @@ const ParticleImage: React.FC<ParticleImageProps> = ({
   gap = 6, // Default gap set to 6px for the specific dense grid look
   dotRadius = 2.8,
   onImageLoaded,
-  style
+  style,
+  slideDirection
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -237,68 +262,81 @@ const ParticleImage: React.FC<ParticleImageProps> = ({
       const nextParticles: Particle[] = [];
       
       const centerX = window.innerWidth / 2;
-          const centerY = window.innerHeight / 2;
+      const centerY = window.innerHeight / 2;
+      const rect = containerRef.current?.getBoundingClientRect();
+      const containerWidth = rect?.width ?? displayWidth;
+      const containerHeight = rect?.height ?? Math.max(10, Math.floor((data.height / Math.max(1, data.width)) * containerWidth));
+      const containerLeft = rect?.left ?? (centerX - containerWidth / 2);
+      const containerTop = rect?.top ?? (centerY - containerHeight / 2);
+      const flowDirection = slideDirection === 'next' ? -1 : slideDirection === 'prev' ? 1 : 0;
+      const directionalImpulse = flowDirection * (gap * 1.2 + 6);
+      const offscreenPadding = Math.max(36, gap * 8);
+
+      const maxLen = Math.max(currentParticles.length, targetPoints.length);
+
+      for (let i = 0; i < maxLen; i++) {
+        const target = targetPoints[i]; 
+        const existing = currentParticles[i]; 
+
+        // Physics Tuning
+        const friction = 0.50 + Math.random() * 0.10; 
+        const ease = 0.20 + Math.random() * 0.10;
+        const randRadius = Math.random() < 0.25 ? Math.random() * 4 : dotRadius;
+
+        if (existing && target) {
+          // Morph existing
+          existing.targetU = target.u;
+          existing.targetV = target.v;
+          existing.targetR = target.r;
+          existing.targetG = target.g;
+          existing.targetB = target.b;
+          existing.targetA = 1; 
+          existing.friction = friction;
+          existing.ease = ease;
+          existing.radiusVar = randRadius;
+          existing.isMoving = true;
           
-          const maxLen = Math.max(currentParticles.length, targetPoints.length);
+          existing.vx += directionalImpulse + (Math.random() - 0.5) * 2;
+          existing.vy += (Math.random() - 0.5) * Math.max(2, gap * 0.4);
 
-          for (let i = 0; i < maxLen; i++) {
-              const target = targetPoints[i]; 
-              const existing = currentParticles[i]; 
-
-          // Physics Tuning
-          const friction = 0.50 + Math.random() * 0.10; 
-          const ease = 0.20 + Math.random() * 0.10;
-          const randRadius = Math.random() < 0.25 ? Math.random() * 4 : dotRadius;
-
-          if (existing && target) {
-              // Morph existing
-              existing.targetU = target.u;
-              existing.targetV = target.v;
-              existing.targetR = target.r;
-              existing.targetG = target.g;
-              existing.targetB = target.b;
-              existing.targetA = 1; 
-              existing.friction = friction;
-              existing.ease = ease;
-              existing.radiusVar = randRadius;
-              existing.isMoving = true;
-              
-              const impulseX = (Math.random() - 0.5) * 5;
-              const impulseY = (Math.random() - 0.5) * 5;
-              existing.vx += impulseX;
-              existing.vy += impulseY;
-
-              nextParticles.push(existing);
-
-          } else if (target && !existing) {
-              // Spawn new
-              const spawnAngle = Math.random() * Math.PI * 2;
-              const spawnDist = 10 + Math.random() * 40; 
-              
-              nextParticles.push({
-                  x: centerX + Math.cos(spawnAngle) * spawnDist,
-                  y: centerY + Math.sin(spawnAngle) * spawnDist,
-                  vx: (Math.random() - 0.5) * 2, 
-                  vy: (Math.random() - 0.5) * 2,
-                  r: target.r, g: target.g, b: target.b, a: 0, 
-                  targetU: target.u,
-                  targetV: target.v,
-                  targetR: target.r,
-                  targetG: target.g,
-                  targetB: target.b,
-                  targetA: 1,
-                  radiusVar: randRadius,
-                  isMoving: true,
-                  friction,
-                  ease
-              });
-          } else if (existing && !target) {
-              // Kill old
-              existing.targetA = 0;
-              existing.vx += (Math.random() - 0.5) * 5;
-              existing.vy += (Math.random() - 0.5) * 5;
-              nextParticles.push(existing);
-          }
+          nextParticles.push(existing);
+        } else if (target && !existing) {
+          // Spawn from the incoming side to make next/prev navigation legible.
+          const targetY = containerTop + target.v * containerHeight;
+          const startX = flowDirection < 0
+            ? containerLeft + containerWidth + offscreenPadding + Math.random() * offscreenPadding
+            : flowDirection > 0
+              ? containerLeft - offscreenPadding - Math.random() * offscreenPadding
+              : centerX + (Math.random() - 0.5) * 40;
+          const startY = targetY + (Math.random() - 0.5) * Math.max(10, gap * 3);
+          
+          nextParticles.push({
+            x: startX,
+            y: startY,
+            vx: directionalImpulse * 0.45 + (Math.random() - 0.5) * 1.5, 
+            vy: (Math.random() - 0.5) * 1.5,
+            r: target.r,
+            g: target.g,
+            b: target.b,
+            a: 0, 
+            targetU: target.u,
+            targetV: target.v,
+            targetR: target.r,
+            targetG: target.g,
+            targetB: target.b,
+            targetA: 1,
+            radiusVar: randRadius,
+            isMoving: true,
+            friction,
+            ease
+          });
+        } else if (existing && !target) {
+          // Kill old
+          existing.targetA = 0;
+          existing.vx += directionalImpulse + (Math.random() - 0.5) * 2;
+          existing.vy += (Math.random() - 0.5) * Math.max(2, gap * 0.5);
+          nextParticles.push(existing);
+        }
       }
 
       particlesRef.current = nextParticles;
