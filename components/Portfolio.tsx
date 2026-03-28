@@ -118,6 +118,9 @@ const Portfolio: React.FC<PortfolioProps> = ({ lang, toggleLang, activeSlug = nu
   // Particle tweak controls (temporary UI)
   const [particleGap, setParticleGap] = useState(6);
   const [particleDotRadius, setParticleDotRadius] = useState(2.8);
+  const [particleJitterSampling, setParticleJitterSampling] = useState(true);
+  const [particleVarySize, setParticleVarySize] = useState(true);
+  const [particleDirectionalFlow, setParticleDirectionalFlow] = useState(true);
   const [fpIndexMap, setFpIndexMap] = useState<Record<string, number>>({});
   const [showTestPanel, setShowTestPanel] = useState(false);
   const langHoldTimerRef = useRef<number | null>(null);
@@ -140,16 +143,19 @@ const Portfolio: React.FC<PortfolioProps> = ({ lang, toggleLang, activeSlug = nu
     minWidth: 'calc(100% - var(--slide-gap))'
   } as React.CSSProperties;
 
-  // Randomize particle defaults (density/size) between two presets on mount
+  // Randomize particle defaults between legacy and newer presets on project change.
   useEffect(() => {
     const presets = [
+      { gap: 2.5, radius: 1.7 },
+      { gap: 7.5, radius: 4.0 },
+      { gap: 10, radius: 2.8 },
       { gap: 6, radius: 2.8 },
       { gap: 4, radius: 1.8 },
     ];
     const pick = presets[Math.floor(Math.random() * presets.length)];
     setParticleGap(pick.gap);
     setParticleDotRadius(pick.radius);
-  }, []);
+  }, [displayIndex]);
 
   useEffect(() => {
     const checkMobile = () => {
@@ -278,7 +284,7 @@ const Portfolio: React.FC<PortfolioProps> = ({ lang, toggleLang, activeSlug = nu
             const src = getProjectParticleSrc(project);
             if (project && src) {
                 try {
-                    await prefetchParticleImage(src, estimatedWidth, particleGap, COLOR_BOOST);
+                    await prefetchParticleImage(src, estimatedWidth, particleGap, COLOR_BOOST, particleJitterSampling);
                     await new Promise(resolve => setTimeout(resolve, 200));
                 } catch (e) {
                     console.warn(`Failed to preload particles for ${project.id}`, e);
@@ -293,7 +299,7 @@ const Portfolio: React.FC<PortfolioProps> = ({ lang, toggleLang, activeSlug = nu
 
       return () => clearTimeout(timer);
     }
-  }, [loading, projects, displayIndex, particleGap, COLOR_BOOST, getProjectParticleSrc]);
+  }, [loading, projects, displayIndex, particleGap, COLOR_BOOST, getProjectParticleSrc, particleJitterSampling]);
 
   const getLangString = (obj: MultiLangString) => {
     return obj[lang] || obj['en'];
@@ -1744,6 +1750,69 @@ const Portfolio: React.FC<PortfolioProps> = ({ lang, toggleLang, activeSlug = nu
                 />
                 <span className="w-8 text-right">{particleDotRadius.toFixed(1)}</span>
               </label>
+              <div className="flex items-center gap-2">
+                <span className="w-14">
+                  {lang === 'en' ? 'Layout' : '排布'}
+                </span>
+                <div className="flex-1 flex gap-1">
+                  <button
+                    type="button"
+                    onClick={() => setParticleJitterSampling(true)}
+                    className={`flex-1 px-2 py-1 border rounded transition-colors ${particleJitterSampling ? 'bg-black text-white border-black' : 'bg-white text-black border-black/20 hover:border-black'}`}
+                  >
+                    {lang === 'en' ? 'Stagger' : '交错'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setParticleJitterSampling(false)}
+                    className={`flex-1 px-2 py-1 border rounded transition-colors ${!particleJitterSampling ? 'bg-black text-white border-black' : 'bg-white text-black border-black/20 hover:border-black'}`}
+                  >
+                    {lang === 'en' ? 'Regular' : '规则'}
+                  </button>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="w-14">
+                  {lang === 'en' ? 'Size Mix' : '大小'}
+                </span>
+                <div className="flex-1 flex gap-1">
+                  <button
+                    type="button"
+                    onClick={() => setParticleVarySize(true)}
+                    className={`flex-1 px-2 py-1 border rounded transition-colors ${particleVarySize ? 'bg-black text-white border-black' : 'bg-white text-black border-black/20 hover:border-black'}`}
+                  >
+                    {lang === 'en' ? 'Varied' : '不一'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setParticleVarySize(false)}
+                    className={`flex-1 px-2 py-1 border rounded transition-colors ${!particleVarySize ? 'bg-black text-white border-black' : 'bg-white text-black border-black/20 hover:border-black'}`}
+                  >
+                    {lang === 'en' ? 'Uniform' : '一致'}
+                  </button>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="w-14">
+                  {lang === 'en' ? 'Flow' : '流向'}
+                </span>
+                <div className="flex-1 flex gap-1">
+                  <button
+                    type="button"
+                    onClick={() => setParticleDirectionalFlow(true)}
+                    className={`flex-1 px-2 py-1 border rounded transition-colors ${particleDirectionalFlow ? 'bg-black text-white border-black' : 'bg-white text-black border-black/20 hover:border-black'}`}
+                  >
+                    {lang === 'en' ? 'Directional' : '方向'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setParticleDirectionalFlow(false)}
+                    className={`flex-1 px-2 py-1 border rounded transition-colors ${!particleDirectionalFlow ? 'bg-black text-white border-black' : 'bg-white text-black border-black/20 hover:border-black'}`}
+                  >
+                    {lang === 'en' ? 'Neutral' : '中性'}
+                  </button>
+                </div>
+              </div>
               {currentProject?.fpImages?.length ? (
                 <button 
                   onClick={() => {
@@ -1767,6 +1836,9 @@ const Portfolio: React.FC<PortfolioProps> = ({ lang, toggleLang, activeSlug = nu
                 alt={currentProject.title['en']} 
                 gap={particleGap}
                 dotRadius={particleDotRadius}
+                jitterSampling={particleJitterSampling}
+                varyParticleSize={particleVarySize}
+                directionalFlow={particleDirectionalFlow}
                 slideDirection={slideDirection}
                 colorBoost={COLOR_BOOST}
                 className={`

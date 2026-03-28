@@ -35,9 +35,6 @@ export interface ParticleImageProps {
   className?: string;
   gap?: number;
   dotRadius?: number;
-  jitterSampling?: boolean;
-  varyParticleSize?: boolean;
-  directionalFlow?: boolean;
   onImageLoaded?: () => void;
   style?: React.CSSProperties;
   slideDirection?: 'next' | 'prev' | null;
@@ -63,12 +60,6 @@ const hashNoise = (x: number, y: number, seed: number) => {
   return raw - Math.floor(raw);
 };
 
-const getDepthScaledRadius = (r: number, g: number, b: number, dotRadius: number) => {
-  const luminance = (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255;
-  const depthScale = clamp(1.24 - luminance * 0.42, 0.82, 1.24);
-  return dotRadius * depthScale;
-};
-
 /**
  * Prefetches and samples particle data for an image.
  * Uses a global cache to avoid re-sampling the same image at the same width.
@@ -80,14 +71,13 @@ export const prefetchParticleImage = (
   src: string, 
   targetDisplayWidth: number, 
   gap: number = 6,
-  _colorBoost?: { mult: number; gamma: number },
-  jitterSampling: boolean = true
+  _colorBoost?: { mult: number; gamma: number }
 ): Promise<SampledData> => {
   return new Promise((resolve) => {
     // Create a cache key that includes the target width to distinguish between sizes
     // We round the width to avoid cache misses on sub-pixel resize differences
     const roundedWidth = Math.round(targetDisplayWidth / 50) * 50;
-    const cacheKey = `${src}_w${roundedWidth}_g${gap}_m${jitterSampling ? 'j' : 'r'}`;
+    const cacheKey = `${src}_w${roundedWidth}_g${gap}`;
 
     if (sampleCache[cacheKey]) {
       resolve(sampleCache[cacheKey]);
@@ -136,20 +126,12 @@ export const prefetchParticleImage = (
                 const baseX = x + offset;
                 const baseY = y + offset;
                 const sampleX = clamp(
-                  Math.round(
-                    jitterSampling
-                      ? baseX + (hashNoise(x, y, 1) - 0.5) * jitterSpan
-                      : baseX
-                  ),
+                  Math.round(baseX + (hashNoise(x, y, 1) - 0.5) * jitterSpan),
                   0,
                   width - 1
                 );
                 const sampleY = clamp(
-                  Math.round(
-                    jitterSampling
-                      ? baseY + (hashNoise(x, y, 2) - 0.5) * jitterSpan
-                      : baseY
-                  ),
+                  Math.round(baseY + (hashNoise(x, y, 2) - 0.5) * jitterSpan),
                   0,
                   height - 1
                 );
@@ -192,9 +174,6 @@ const ParticleImage: React.FC<ParticleImageProps> = ({
   className, 
   gap = 6, // Default gap set to 6px for the specific dense grid look
   dotRadius = 2.8,
-  jitterSampling = true,
-  varyParticleSize = true,
-  directionalFlow = true,
   onImageLoaded,
   style,
   slideDirection
@@ -266,7 +245,7 @@ const ParticleImage: React.FC<ParticleImageProps> = ({
       displayWidth = Math.min(displayWidth, 2000);
 
       // Use the shared prefetch function
-      const data = await prefetchParticleImage(src, displayWidth, gap, undefined, jitterSampling);
+      const data = await prefetchParticleImage(src, displayWidth, gap);
       
       if (!isMounted) return;
       
@@ -289,9 +268,7 @@ const ParticleImage: React.FC<ParticleImageProps> = ({
       const containerHeight = rect?.height ?? Math.max(10, Math.floor((data.height / Math.max(1, data.width)) * containerWidth));
       const containerLeft = rect?.left ?? (centerX - containerWidth / 2);
       const containerTop = rect?.top ?? (centerY - containerHeight / 2);
-      const flowDirection = directionalFlow
-        ? (slideDirection === 'next' ? -1 : slideDirection === 'prev' ? 1 : 0)
-        : 0;
+      const flowDirection = slideDirection === 'next' ? -1 : slideDirection === 'prev' ? 1 : 0;
       const directionalImpulse = flowDirection * (gap * 1.2 + 6);
       const offscreenPadding = Math.max(36, gap * 8);
 
@@ -304,12 +281,7 @@ const ParticleImage: React.FC<ParticleImageProps> = ({
         // Physics Tuning
         const friction = 0.50 + Math.random() * 0.10; 
         const ease = 0.20 + Math.random() * 0.10;
-        const depthBaseRadius = varyParticleSize && target
-          ? getDepthScaledRadius(target.r, target.g, target.b, dotRadius)
-          : dotRadius;
-        const randRadius = varyParticleSize
-          ? depthBaseRadius * (0.9 + Math.random() * 0.55)
-          : dotRadius;
+        const randRadius = Math.random() < 0.25 ? Math.random() * 4 : dotRadius;
 
         if (existing && target) {
           // Morph existing
@@ -321,7 +293,6 @@ const ParticleImage: React.FC<ParticleImageProps> = ({
           existing.targetA = 1; 
           existing.friction = friction;
           existing.ease = ease;
-          existing.radius = depthBaseRadius;
           existing.radiusVar = randRadius;
           existing.isMoving = true;
           
@@ -348,7 +319,6 @@ const ParticleImage: React.FC<ParticleImageProps> = ({
             g: target.g,
             b: target.b,
             a: 0, 
-            radius: depthBaseRadius,
             targetU: target.u,
             targetV: target.v,
             targetR: target.r,
@@ -376,7 +346,7 @@ const ParticleImage: React.FC<ParticleImageProps> = ({
     processTransition();
 
     return () => { isMounted = false; };
-  }, [src, layoutReady, gap, dotRadius, jitterSampling, varyParticleSize, directionalFlow, onImageLoaded]);
+  }, [src, layoutReady, gap, onImageLoaded]);
 
 
   // --- Animation Loop ---
@@ -456,11 +426,10 @@ const ParticleImage: React.FC<ParticleImageProps> = ({
       if (p.a < 0.05) continue;
 
       // Size modulation during movement; settle to base size near target
-      const baseRadius = p.radius ?? dotRadius;
-      const targetRadius = p.isMoving ? (p.radiusVar ?? baseRadius) : baseRadius;
+      const targetRadius = p.isMoving ? (p.radiusVar ?? dotRadius) : dotRadius;
       const dist = Math.hypot(targetX - p.x, targetY - p.y);
       const mix = Math.max(0, Math.min(1, dist / Math.max(1, Math.max(cWidth, cHeight) * 0.3)));
-      const renderRadius = baseRadius + (targetRadius - baseRadius) * mix;
+      const renderRadius = dotRadius + (targetRadius - dotRadius) * mix;
 
       if (dist < 0.3) {
         p.isMoving = false;
