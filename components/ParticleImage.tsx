@@ -63,6 +63,23 @@ const hashNoise = (x: number, y: number, seed: number) => {
   return raw - Math.floor(raw);
 };
 
+const getAxisPositions = (length: number, gap: number) => {
+  if (length <= 1) return [0];
+
+  const offset = Math.min(gap / 2, length / 2);
+  const usableSpan = Math.max(0, length - gap);
+  const count = Math.max(1, Math.round(usableSpan / gap) + 1);
+
+  if (count === 1) {
+    return [length / 2];
+  }
+
+  const maxPosition = Math.max(offset, length - offset);
+  return Array.from({ length: count }, (_, index) => (
+    offset + (index / (count - 1)) * (maxPosition - offset)
+  ));
+};
+
 const getDepthScaledRadius = (
   r: number,
   g: number,
@@ -134,45 +151,41 @@ export const prefetchParticleImage = (
           ctx.drawImage(img, 0, 0, width, height);
           const imageData = ctx.getImageData(0, 0, width, height).data;
           const points = [];
+          const xPositions = getAxisPositions(width, gap);
+          const yPositions = getAxisPositions(height, gap);
+          const xGap = xPositions.length > 1 ? xPositions[1] - xPositions[0] : gap;
+          const yGap = yPositions.length > 1 ? yPositions[1] - yPositions[0] : gap;
+          const jitterSpanX = Math.min(gap * 0.42, xGap * 0.55);
+          const jitterSpanY = Math.min(gap * 0.42, yGap * 0.55);
 
-          // Sample near the center of each cell, but with a deterministic jitter
-          // so the image keeps a minimal feel without reading as a rigid LED grid.
-          const offset = gap / 2;
-          const jitterSpan = gap * 0.42;
-
-          for (let y = 0; y < height; y += gap) {
-            for (let x = 0; x < width; x += gap) {
-                if (x >= width || y >= height) continue;
-
-                const baseX = x + offset;
-                const baseY = y + offset;
-                const sampleX = clamp(
-                  Math.round(
-                    jitterSampling
-                      ? baseX + (hashNoise(x, y, 1) - 0.5) * jitterSpan
-                      : baseX
-                  ),
+          for (let yIndex = 0; yIndex < yPositions.length; yIndex++) {
+            for (let xIndex = 0; xIndex < xPositions.length; xIndex++) {
+                const baseX = xPositions[xIndex];
+                const baseY = yPositions[yIndex];
+                const positionX = clamp(
+                  jitterSampling
+                    ? baseX + (hashNoise(xIndex, yIndex, 1) - 0.5) * jitterSpanX
+                    : baseX,
                   0,
                   width - 1
                 );
-                const sampleY = clamp(
-                  Math.round(
-                    jitterSampling
-                      ? baseY + (hashNoise(x, y, 2) - 0.5) * jitterSpan
-                      : baseY
-                  ),
+                const positionY = clamp(
+                  jitterSampling
+                    ? baseY + (hashNoise(xIndex, yIndex, 2) - 0.5) * jitterSpanY
+                    : baseY,
                   0,
                   height - 1
                 );
-
+                const sampleX = Math.round(positionX);
+                const sampleY = Math.round(positionY);
                 const index = (sampleY * width + sampleX) * 4;
                 const a = imageData[index + 3];
 
                 if (a > 100) { 
                   points.push({
                       // Store Normalized Coordinates (0.0 to 1.0)
-                      u: (sampleX + 0.5) / width, 
-                      v: (sampleY + 0.5) / height,
+                      u: (positionX + 0.5) / width, 
+                      v: (positionY + 0.5) / height,
                       r: imageData[index], 
                       g: imageData[index + 1], 
                       b: imageData[index + 2]

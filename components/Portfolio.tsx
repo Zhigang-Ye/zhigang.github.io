@@ -40,15 +40,23 @@ type OpenProjectOptions = {
   fromRoute?: boolean;
 };
 
-const PARTICLE_PRESETS = [
-  { gap: 2.5, radius: 1.7 },
-  { gap: 7.5, radius: 4.0 },
-  { gap: 10, radius: 2.8 },
-  { gap: 6, radius: 2.8 },
-  { gap: 4, radius: 1.8 },
-];
+type ParticlePreset = {
+  gap: number;
+  radius: number;
+  jitterSampling: boolean;
+  sizeMix: number;
+  directionalFlow: boolean;
+};
 
-const pickParticlePreset = () =>
+const PARTICLE_PRESETS = [
+  { gap: 7, radius: 3.0, jitterSampling: false, sizeMix: 0.9, directionalFlow: false },
+  { gap: 2.5, radius: 1.7, jitterSampling: true, sizeMix: 0, directionalFlow: false },
+  { gap: 7.5, radius: 4.0, jitterSampling: true, sizeMix: 1.0, directionalFlow: false },
+  { gap: 10, radius: 2.8, jitterSampling: true, sizeMix: 0, directionalFlow: false },
+  { gap: 6, radius: 2.8, jitterSampling: false, sizeMix: 0, directionalFlow: false },
+] satisfies ParticlePreset[];
+
+const pickParticlePreset = (): ParticlePreset =>
   PARTICLE_PRESETS[Math.floor(Math.random() * PARTICLE_PRESETS.length)];
 
 const normalizeSlug = (value: string) => value.toLowerCase().replace(/[^a-z0-9]+/g, '');
@@ -127,16 +135,16 @@ const Portfolio: React.FC<PortfolioProps> = ({ lang, toggleLang, activeSlug = nu
   const [isMobile, setIsMobile] = useState(false);
 
   // Particle tweak controls (temporary UI)
-  const initialParticlePresetRef = useRef<{ gap: number; radius: number } | null>(null);
+  const initialParticlePresetRef = useRef<ParticlePreset | null>(null);
   if (!initialParticlePresetRef.current) {
     initialParticlePresetRef.current = pickParticlePreset();
   }
 
   const [particleGap, setParticleGap] = useState(initialParticlePresetRef.current.gap);
   const [particleDotRadius, setParticleDotRadius] = useState(initialParticlePresetRef.current.radius);
-  const [particleJitterSampling, setParticleJitterSampling] = useState(true);
-  const [particleSizeMix, setParticleSizeMix] = useState(1);
-  const [particleDirectionalFlow, setParticleDirectionalFlow] = useState(true);
+  const [particleJitterSampling, setParticleJitterSampling] = useState(initialParticlePresetRef.current.jitterSampling);
+  const [particleSizeMix, setParticleSizeMix] = useState(initialParticlePresetRef.current.sizeMix);
+  const [particleDirectionalFlow, setParticleDirectionalFlow] = useState(initialParticlePresetRef.current.directionalFlow);
   const [fpIndexMap, setFpIndexMap] = useState<Record<string, number>>({});
   const [showTestPanel, setShowTestPanel] = useState(false);
   const langHoldTimerRef = useRef<number | null>(null);
@@ -1707,14 +1715,16 @@ const Portfolio: React.FC<PortfolioProps> = ({ lang, toggleLang, activeSlug = nu
       >
         <div className="absolute inset-0 pointer-events-none" />
         <div className="absolute bottom-4 left-4 z-30 flex flex-col items-start gap-2 pointer-events-auto">
-          <button
-            type="button"
-            onClick={() => setShowTestPanel((prev) => !prev)}
-            title={lang === 'en' ? 'Particle settings' : '粒子设置'}
-            className="px-3 py-2 text-[10px] uppercase tracking-[0.24em] border border-black bg-white/92 backdrop-blur hover:bg-black hover:text-white transition-colors rounded-full shadow-sm"
-          >
-            {showTestPanel ? (lang === 'en' ? 'Close Panel' : '关闭面板') : 'Particle'}
-          </button>
+          {!showTestPanel && (
+            <button
+              type="button"
+              onClick={() => setShowTestPanel(true)}
+              title={lang === 'en' ? 'Particle settings' : '粒子设置'}
+              className="w-9 h-9 flex items-center justify-center text-xs border border-black bg-white/90 backdrop-blur hover:bg-black hover:text-white transition-colors rounded-full shadow-sm"
+            >
+              ⚙
+            </button>
+          )}
         {/* TEMP Controls (hidden by default) */}
         {showTestPanel && (
           <div className="bg-white/92 backdrop-blur shadow-md border border-black/10 rounded-lg p-3 flex flex-col gap-2 text-xs w-[min(280px,calc(100vw-2rem))] max-h-[70vh] overflow-y-auto">
