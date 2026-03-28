@@ -1,6 +1,22 @@
 
 [
   {
+    "id": "9",
+    "title": {
+      "en": "Taste Like Salsedine",
+      "cn": "Taste Like Salsedine",
+      "tw": "Taste Like Salsedine"
+    },
+    "year": "2026",
+    "description": {
+      "en": "Archives, photography, and generative images weave a salt-stained memory of the sea.",
+      "cn": "档案、摄影与生成影像编织出一段盐渍般的海之记忆。",
+      "tw": "檔案、攝影與生成影像編織出一段鹽漬般的海之記憶。"
+    },
+    "imageUrl": "portfolio/9/FP/1.jpg",
+    "folderPath": "portfolio/9"
+  },
+  {
     "id": "1",
     "title": {
       "en": "A Map Without Treasure",
@@ -18,6 +34,7 @@
   },
   {
     "id": "2",
+    "hidden": true,
     "title": {
       "en": "Soon, we can have a football team",
       "cn": "很快，我们就能有一支球队",

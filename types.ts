@@ -16,6 +16,7 @@ export interface Project {
   year: string;
   description: MultiLangString;
   imageUrl: string;
+  hidden?: boolean;
   fpImages?: string[]; // Images located in FP subfolder for particle covers
   // Path to the specific folder containing detailed assets/layout for this project
   // e.g., "portfolio/1"

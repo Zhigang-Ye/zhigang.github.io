@@ -8,7 +8,8 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "lowres": "node scripts/generate-lowres.mjs"
+    "lowres": "node scripts/generate-lowres.mjs",
+    "normalize:portfolio": "node scripts/normalize-portfolio-project.mjs"
   },
   "dependencies": {
     "lucide-react": "^0.344.0",

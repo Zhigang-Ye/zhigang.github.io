@@ -227,7 +227,8 @@ const Portfolio: React.FC<PortfolioProps> = ({ lang, toggleLang, activeSlug = nu
             return project;
         };
 
-        const enriched = await Promise.all(data.map(resolveFPForProject));
+        const visibleProjects = data.filter((project: Project) => !project.hidden);
+        const enriched = await Promise.all(visibleProjects.map(resolveFPForProject));
         
         setProjects(enriched);
 
@@ -635,9 +636,8 @@ const Portfolio: React.FC<PortfolioProps> = ({ lang, toggleLang, activeSlug = nu
             if (!content.imagesA || content.imagesA.length === 0) {
                 content.imagesA = await discoverImages(project.folderPath, 'A');
             }
-            // B: only use what is explicitly provided; do not auto-discover when empty to avoid 404 spam
-            if (content.imagesB === undefined) {
-                content.imagesB = [];
+            if (!content.imagesB || content.imagesB.length === 0) {
+                content.imagesB = await discoverImages(project.folderPath, 'B');
             }
         }
 
@@ -664,8 +664,7 @@ const Portfolio: React.FC<PortfolioProps> = ({ lang, toggleLang, activeSlug = nu
         }
 
         // --- PRELOAD THUMBNAILS RATIOS (Folder B - Thumbnails) ---
-        // Priority: imagesB -> empty (Strict separation as requested)
-        // If imagesB is missing, we do not show thumbnails in the gallery section
+        // Priority: imagesB -> empty
         const thumbs = content.imagesB || [];
         if (thumbs.length > 0) {
              // If cached, use directly
