@@ -63,4 +63,5 @@ export interface BioData {
   contact: ContactInfo;
   timeline: TimelineItem[];
   exhibitions: TimelineItem[];
+  awards: TimelineItem[];
 }

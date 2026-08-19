@@ -69,7 +69,7 @@ const Biography: React.FC<BiographyProps> = ({ lang }) => {
 
   if (!data) return null;
 
-  const { contact, timeline, exhibitions } = data;
+  const { contact, timeline, exhibitions, awards } = data;
 
   const secondaryStyle = { fontFamily: '"Doto", sans-serif' };
   const secondaryClass = "text-[#F22C2C]";
@@ -142,7 +142,40 @@ const Biography: React.FC<BiographyProps> = ({ lang }) => {
         </div>
       </div>
 
-      {/* 3. Contact Section */}
+      {/* 3. Awards Section */}
+      <div className="mb-16">
+        <div className="border-b border-black pb-2 mb-6">
+          <h2 className="text-base font-normal">{TRANSLATIONS.SELECTED_AWARDS[lang]}</h2>
+        </div>
+        <div className="grid grid-cols-[100px_1fr] md:grid-cols-[140px_1fr] gap-x-4 gap-y-4 text-base">
+          {awards.map((item, idx) => (
+            <React.Fragment key={idx}>
+              <div
+                style={secondaryStyle}
+                className={`text-sm pt-0.5 ${secondaryClass}`}
+              >
+                {item.year}
+              </div>
+              <div className="text-black">
+                {item.url ? (
+                  <a
+                    href={item.url}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="underline decoration-1 underline-offset-2 hover:text-[#F22C2C] transition-colors"
+                  >
+                    {getLangString(item.text)}
+                  </a>
+                ) : (
+                  getLangString(item.text)
+                )}
+              </div>
+            </React.Fragment>
+          ))}
+        </div>
+      </div>
+
+      {/* 4. Contact Section */}
       <div className="mb-16">
          <div className="border-b border-black pb-2 mb-6">
           <h2 className="text-base font-normal">{TRANSLATIONS.CONTACT[lang]}</h2>
@@ -178,7 +211,7 @@ const Biography: React.FC<BiographyProps> = ({ lang }) => {
         </div>
       </div>
 
-      {/* 4. Message Form Section */}
+      {/* 5. Message Form Section */}
       <div className="mb-20">
         <form onSubmit={handleSubmit} className="space-y-10 max-w-3xl">
           

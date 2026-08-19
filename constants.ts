@@ -17,6 +17,7 @@ export const TRANSLATIONS: Record<string, Record<Lang, string>> = {
   
   // Biography
   SELECTED_EXHIBITIONS: { en: 'Selected Exhibitions', cn: '精选展览', tw: '精選展覽' },
+  SELECTED_AWARDS: { en: 'Selected Awards', cn: '精选奖项', tw: '精選獎項' },
   CONTACT: { en: 'Contact', cn: '联系方式', tw: '聯絡方式' },
   NAME_LABEL: { en: 'Name', cn: '姓名', tw: '姓名' },
   NAME_REQUIRED_HINT: { en: '(required)', cn: '(必填)', tw: '(必填)' },

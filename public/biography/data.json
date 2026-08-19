@@ -81,6 +81,15 @@
     {
       "year": "",
       "text": {
+        "en": "RCA AI Festival 2026: Where Intelligence Meets Imagination, Royal College of Art, London, UK",
+        "cn": "RCA AI Festival 2026：Where Intelligence Meets Imagination, 英国皇家艺术学院, 伦敦, 英国",
+        "tw": "RCA AI Festival 2026：Where Intelligence Meets Imagination, 英國皇家藝術學院, 倫敦, 英國"
+      },
+      "url": "https://www.rca.ac.uk/research-innovation/rca-ai-festival-2026/"
+    },
+    {
+      "year": "",
+      "text": {
         "en": "CVPR 2026 Art Gallery (5–7 June), Denver, USA",
         "cn": "CVPR 2026 艺术画廊（6月5–7日）, 丹佛, 美国",
         "tw": "CVPR 2026 藝術畫廊（6月5–7日）, 丹佛, 美國"
@@ -167,6 +176,17 @@
         "cn": "自由艺术博览会, 松山3号仓库, 台北, 中国",
         "tw": "自由藝術博覽會, 松山3號倉庫, 台北, 中國"
       }
+    }
+  ],
+  "awards": [
+    {
+      "year": "2026",
+      "text": {
+        "en": "Winner, Photometria Awards 2026: Coming of Age (18+), Taste Like Salsedine",
+        "cn": "Photometria Awards 2026「Coming of Age (18+)」获奖, 作品《Taste Like Salsedine》",
+        "tw": "Photometria Awards 2026「Coming of Age (18+)」獲獎, 作品《Taste Like Salsedine》"
+      },
+      "url": "https://www.photometria.gr/en/photometria-awards-2026-coming-of-age-18-results/"
     }
   ]
 }
