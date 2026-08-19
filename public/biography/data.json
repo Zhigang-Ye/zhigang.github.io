@@ -69,6 +69,41 @@
     }
   ],
   "exhibitions": [
+    {
+      "year": "2026",
+      "text": {
+        "en": "LOOP (6–9 May), Four Corners Gallery, London, UK",
+        "cn": "LOOP（5月6–9日）, Four Corners 画廊, 伦敦, 英国",
+        "tw": "LOOP（5月6–9日）, Four Corners 畫廊, 倫敦, 英國"
+      },
+      "url": "https://www.imageprintcentre.co.uk/loop-2026"
+    },
+    {
+      "year": "",
+      "text": {
+        "en": "CVPR 2026 Art Gallery (5–7 June), Denver, USA",
+        "cn": "CVPR 2026 艺术画廊（6月5–7日）, 丹佛, 美国",
+        "tw": "CVPR 2026 藝術畫廊（6月5–7日）, 丹佛, 美國"
+      },
+      "url": "https://cvpr.thecvf.com/Conferences/2026/News/Art_Program"
+    },
+    {
+      "year": "",
+      "text": {
+        "en": "RAW: Unpolished Reality, Rock Bund, Shanghai, China",
+        "cn": "RAW：未经打磨的现实, Rock Bund, 上海, 中国",
+        "tw": "RAW：未經打磨的現實, Rock Bund, 上海, 中國"
+      }
+    },
+    {
+      "year": "",
+      "text": {
+        "en": "Tidal Resistance (23–26 June), Palmer Gallery, London, UK",
+        "cn": "潮汐抵抗（6月23–26日）, Palmer 画廊, 伦敦, 英国",
+        "tw": "潮汐抵抗（6月23–26日）, Palmer 畫廊, 倫敦, 英國"
+      },
+      "url": "https://www.artrabbit.com/events/tidal-resistance"
+    },
     { 
       "year": "2025", 
       "text": {

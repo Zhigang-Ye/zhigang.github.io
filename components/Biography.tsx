@@ -124,7 +124,18 @@ const Biography: React.FC<BiographyProps> = ({ lang }) => {
                 {item.year}
               </div>
               <div className="text-black">
-                {getLangString(item.text)}
+                {item.url ? (
+                  <a
+                    href={item.url}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="underline decoration-1 underline-offset-2 hover:text-[#F22C2C] transition-colors"
+                  >
+                    {getLangString(item.text)}
+                  </a>
+                ) : (
+                  getLangString(item.text)
+                )}
               </div>
             </React.Fragment>
           ))}

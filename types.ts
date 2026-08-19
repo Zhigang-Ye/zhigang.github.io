@@ -56,6 +56,7 @@ export interface ContactInfo {
 export interface TimelineItem {
   year: string;
   text: MultiLangString;
+  url?: string;
 }
 
 export interface BioData {
