@@ -1,16 +1,17 @@
 {
-  "src": "cover-0c82ba7492d3.spz",
-  "width": 443,
-  "height": 346,
-  "fov": 47.87024120778996,
-  "focusDepth": 0.5,
-  "pointCount": 1178798,
-  "bytes": 9980084,
+  "src": "cover-bfd2e4eff474.spz",
+  "width": 4974,
+  "height": 6691,
+  "fov": 60.1176585143549,
+  "focusDepth": 3.43359375,
+  "pointCount": 1172567,
+  "bytes": 11181252,
   "mobile": {
-    "src": "cover-05fad86ce4d2.spz",
-    "pointCount": 181198,
-    "bytes": 1782796
+    "src": "cover-ce9d7508cf71.spz",
+    "pointCount": 305640,
+    "bytes": 3633090
   },
   "generator": "Apple SHARP (single-image research preview)",
-  "sourceSha256": "b7a440043cff248c4482bb548d13c13d27e0131559d0cf33c32dc18b683b31b9"
+  "sourceSha256": "1d713350ef9015ba42f9f0877f7a7522964afc8b647ab5bbf85800e740c97508",
+  "motionScale": 0.7615187713310579
 }

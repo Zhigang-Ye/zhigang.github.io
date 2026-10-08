@@ -43,23 +43,33 @@ changed images; unchanged derivatives are reused on subsequent builds.
 
 ## 3D cover preview
 
-Five project covers use real Gaussian scenes inferred offline with
+All seven visible project covers use real Gaussian scenes inferred offline with
 [Apple SHARP](https://github.com/apple/ml-sharp) and rendered with
 [Spark for Three.js](https://sparkjs.dev/). Desktop and mobile both load 3D
 directly, with a progress indicator and no photograph placeholder. Mobile uses
 the smaller scene in `scene.json`; rendering stops when the camera is idle or
-the cover is off screen. `As If a Cut of Light` and `The Last Talk` retain their
-photograph covers while further conversion is paused. Mobile gyroscope control
-has not been added yet; the existing pointer and touch interaction remains.
+the cover is off screen. Desktop covers share one width, fitted to the tallest
+cover without cropping. The plant cover uses the complete plant in `4/A/1.jpg`.
+
+On supported phones, tilting the device moves the actual 3D camera. Browsers
+that require a gesture show **Enable motion**; permission is remembered while
+switching projects on the same page. **Recenter** makes the current phone pose
+neutral. Landscape orientation is accounted for, sensor noise is filtered, and
+sensor listeners stop off screen or when the page is hidden. Denied permission
+or unavailable sensors leave touch interaction available. Reduced-motion
+preferences disable the tilt effect.
 
 Generated scenes live in `public/portfolio/<id>/GS/`. The project's
-`gaussianCover.image` identifies its original FP image, and `gaussianCover.scene`
+`gaussianCover.image` identifies its original cover image, and `gaussianCover.scene`
 points to the scene manifest. Python and model weights are only needed to
 regenerate scenes, not to run or build the website.
 
 `scripts/generate-cover-3dgs.py` accepts `--input`, `--checkpoint`, `--sharp-root`,
 `--output`, and `--device cpu|mps|cuda`. It writes compressed SPZ files and a
-manifest for both full and mobile quality. A separate Python 3.11 environment
+manifest for both full and mobile quality. Mobile scenes are limited to 320,000
+Gaussians, retaining fine foreground depth while simplifying uniform backgrounds.
+The optional `motionScale` keeps camera travel modest in scenes with a large
+depth range. A separate Python 3.11 environment
 was used on Intel macOS with torch 2.2.2, torchvision 0.17.2, numpy < 2,
 timm 1.0.20, scipy, plyfile, pillow-heif, imageio, click, and matplotlib.
 SHARP's code and model are governed by its

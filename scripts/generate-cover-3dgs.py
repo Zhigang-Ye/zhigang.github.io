@@ -63,11 +63,26 @@ def mobile_gaussians(arrays, focal, width, height):
         projected = jacobian @ covariance @ jacobian.transpose(0, 2, 1)
         return np.sqrt(np.maximum(np.linalg.det(projected), 1e-24))
     columns = 320
-    rows = round(columns * height / width)
+    depth_step = 0.04
     uv = positions[:, :2] / positions[:, 2:3] * focal / [width, height] + 0.5
+    black = arrays['colors'].max(axis=1) < 0.06
+    white = arrays['colors'].min(axis=1) > 0.94
+    flat_background = black | white
     # Depth bins prevent joining the subject with a more distant background.
-    keys = np.column_stack([np.floor(uv * [columns, rows]), np.floor(np.log(positions[:, 2]) / 0.04)]).astype(np.int64)
-    _, groups = np.unique(keys, axis=0, return_inverse=True)
+    # Coarsen uniform backgrounds first; retain the subject's depth precision.
+    while True:
+        rows = max(1, round(columns * height / width))
+        bins = [np.floor(uv * [columns, rows]), np.floor(np.log(positions[:, 2]) / np.where(flat_background, depth_step, 0.04))]
+        if depth_step > 0.04:
+            bins.append(np.where(black, 0, np.where(white, 2, 1)))
+        keys = np.column_stack(bins).astype(np.int64)
+        unique, groups = np.unique(keys, axis=0, return_inverse=True)
+        if len(unique) <= 320_000:
+            break
+        if depth_step < 0.32:
+            depth_step *= 2
+        else:
+            columns = max(1, round(columns * 0.9))
     weights = arrays['opacities'] * projected_area(positions, covariances)
     mass = np.bincount(groups, weights=weights)
     def average(values):
@@ -190,6 +205,7 @@ def main():
         'height': height,
         'fov': math.degrees(2 * math.atan(height / (2 * focal))),
         'focusDepth': float(np.median(arrays['positions'][:, 2])),
+        'motionScale': float(min(1, max(0.2, np.quantile(arrays['positions'][:, 2], 0.1) / (np.median(arrays['positions'][:, 2]) * 0.8)))),
         'pointCount': len(arrays['positions']),
         'bytes': size,
         'mobile': {'src': mobile_filename, 'pointCount': len(mobile['positions']), 'bytes': mobile_size},

@@ -1303,7 +1303,14 @@ const Portfolio: React.FC<PortfolioProps> = ({ lang, toggleLang, activeSlug = nu
   const currentSrc = currentProject ? getProjectCoverSrc(currentProject) : '';
   const coverImage = getImageMetadata(imageManifest, getProjectCoverOriginalSrc(currentProject));
   const coverRatio = coverImage ? coverImage.width / coverImage.height : DEFAULT_SLIDER_RATIO;
-  const coverWidth = `min(calc(100vw - ${isMobile ? MOBILE_SIDE_PADDING * 2 : 160}px), calc((100dvh - ${isMobile ? 200 : 190}px) * ${coverRatio}))`;
+  // Fit the tallest cover once so switching projects never changes desktop width.
+  const desktopCoverRatio = Math.min(...projects.map((project) => {
+    const image = getImageMetadata(imageManifest, getProjectCoverOriginalSrc(project));
+    return image ? image.width / image.height : DEFAULT_SLIDER_RATIO;
+  }));
+  const coverWidth = isMobile
+    ? `min(calc(100vw - ${MOBILE_SIDE_PADDING * 2}px), calc((100dvh - 200px) * ${coverRatio}))`
+    : `min(calc(100vw - 160px), calc((100dvh - 190px) * ${desktopCoverRatio}))`;
   const gaussianCover = currentProject.gaussianCover;
   const hasGaussianCover = gaussianCover && resolveProjectImage(currentProject.folderPath, gaussianCover.image) === getProjectCoverOriginalSrc(currentProject);
 

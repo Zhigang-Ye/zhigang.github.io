@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { SparkRenderer, SplatFileType, SplatMesh } from '@sparkjsdev/spark';
+import { createDeviceTilt, DeviceTiltControls, DeviceTiltStatus } from './deviceTilt';
 
 export interface GaussianSceneMetadata {
   src: string;
@@ -7,6 +8,7 @@ export interface GaussianSceneMetadata {
   height: number;
   fov: number;
   focusDepth: number;
+  motionScale?: number;
   bytes: number;
   pointCount: number;
   mobile?: { src: string; bytes: number; pointCount: number };
@@ -18,13 +20,18 @@ export const createGaussianViewer = async (
   fileBytes: Uint8Array,
   mobile: boolean,
   signal: AbortSignal,
-  onError: () => void
+  onError: () => void,
+  motion?: {
+    onStatus: (status: DeviceTiltStatus) => void;
+    onControls: (controls: DeviceTiltControls | null) => void;
+  }
 ): Promise<() => void> => {
   if (signal.aborted) throw new DOMException('Aborted', 'AbortError');
   const renderer = new THREE.WebGLRenderer({ antialias: false, alpha: false, powerPreference: 'high-performance' });
   const scene = new THREE.Scene();
   scene.background = new THREE.Color(0xffffff);
   const depth = metadata.focusDepth;
+  const motionDepth = depth * Math.min(1, Math.max(0.2, metadata.motionScale ?? 1));
   const camera = new THREE.PerspectiveCamera(metadata.fov, metadata.width / metadata.height, depth * 0.005, depth * 200);
   camera.lookAt(0, 0, -depth);
   renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, mobile ? 1.25 : 1.5));
@@ -41,6 +48,8 @@ export const createGaussianViewer = async (
   let splats: SplatMesh | undefined;
   let resizeObserver: ResizeObserver | undefined;
   let visibilityObserver: IntersectionObserver | undefined;
+  let tilt: DeviceTiltControls | undefined;
+  let motionActive = false;
   const current = new THREE.Vector2();
   const target = new THREE.Vector2();
   const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
@@ -53,7 +62,7 @@ export const createGaussianViewer = async (
     const delta = Math.min(50, previousTime ? time - previousTime : 16);
     previousTime = time;
     current.lerp(target, 1 - Math.exp(-delta / 80));
-    camera.position.set(current.x * depth * 0.045, current.y * depth * 0.035, 0);
+    camera.position.set(current.x * motionDepth * 0.045, current.y * motionDepth * 0.035, 0);
     camera.lookAt(0, 0, -depth);
     try {
       renderer.render(scene, camera);
@@ -64,7 +73,7 @@ export const createGaussianViewer = async (
     }
   };
   const move = (event: PointerEvent) => {
-    if (reducedMotion.matches) return;
+    if (reducedMotion.matches || motionActive) return;
     const bounds = host.getBoundingClientRect();
     if (!bounds.width || !bounds.height) return;
     target.set(
@@ -78,11 +87,24 @@ export const createGaussianViewer = async (
     if (reducedMotion.matches) current.set(0, 0);
     requestRender();
   };
-  const pointerUp = (event: PointerEvent) => { if (event.pointerType !== 'mouse') reset(); };
+  const pointerLeave = () => { if (!motionActive) reset(); };
+  const pointerUp = (event: PointerEvent) => { if (event.pointerType !== 'mouse' && !motionActive) reset(); };
+  const syncMotion = () => {
+    if (mobile && motion && !tilt && !reducedMotion.matches) {
+      tilt = createDeviceTilt((x, y) => { target.set(x, y); requestRender(); }, (status) => {
+        motionActive = status === 'active';
+        motion.onStatus(status);
+      });
+      motion.onControls(tilt);
+    }
+    tilt?.setPaused(!inView || document.hidden || reducedMotion.matches);
+  };
+  const motionPreferenceChanged = () => { syncMotion(); reset(); };
   const visibilityChanged = () => {
     cancelAnimationFrame(frame);
     frame = 0;
     previousTime = 0;
+    syncMotion();
     requestRender();
   };
   const resize = () => {
@@ -102,12 +124,14 @@ export const createGaussianViewer = async (
     signal.removeEventListener('abort', dispose);
     resizeObserver?.disconnect();
     visibilityObserver?.disconnect();
+    tilt?.dispose();
+    motion?.onControls(null);
     host.removeEventListener('pointermove', move);
-    host.removeEventListener('pointerleave', reset);
+    host.removeEventListener('pointerleave', pointerLeave);
     host.removeEventListener('pointerup', pointerUp);
-    host.removeEventListener('pointercancel', reset);
+    host.removeEventListener('pointercancel', pointerLeave);
     document.removeEventListener('visibilitychange', visibilityChanged);
-    reducedMotion.removeEventListener('change', reset);
+    reducedMotion.removeEventListener('change', motionPreferenceChanged);
     renderer.domElement.removeEventListener('webglcontextlost', contextLost);
     splats?.dispose();
     spark?.dispose();
@@ -132,11 +156,11 @@ export const createGaussianViewer = async (
     scene.add(spark, splats);
     renderer.domElement.addEventListener('webglcontextlost', contextLost);
     host.addEventListener('pointermove', move, { passive: true });
-    host.addEventListener('pointerleave', reset);
+    host.addEventListener('pointerleave', pointerLeave);
     host.addEventListener('pointerup', pointerUp);
-    host.addEventListener('pointercancel', reset);
+    host.addEventListener('pointercancel', pointerLeave);
     document.addEventListener('visibilitychange', visibilityChanged);
-    reducedMotion.addEventListener('change', reset);
+    reducedMotion.addEventListener('change', motionPreferenceChanged);
     resizeObserver = new ResizeObserver(resize);
     resizeObserver.observe(host);
     visibilityObserver = new IntersectionObserver(([entry]) => {
@@ -148,7 +172,9 @@ export const createGaussianViewer = async (
     await spark.update({ scene, camera });
     if (disposed) throw new DOMException('Aborted', 'AbortError');
     initialized = true;
+    syncMotion();
     renderer.render(scene, camera);
+    if (current.distanceToSquared(target) > 0.000001) requestRender();
     return dispose;
   } catch (error) {
     dispose();

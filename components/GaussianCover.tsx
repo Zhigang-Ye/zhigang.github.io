@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import type { GaussianSceneMetadata } from '../utils/gaussianViewer';
 import type { Lang } from '../types';
+import type { DeviceTiltControls, DeviceTiltStatus } from '../utils/deviceTilt';
 
 interface GaussianCoverProps {
   sceneUrl: string;
@@ -16,6 +17,8 @@ const GaussianCover: React.FC<GaussianCoverProps> = ({ sceneUrl, alt, width, hei
   const [status, setStatus] = useState<'loading' | 'processing' | 'ready' | 'error'>('loading');
   const [progress, setProgress] = useState(0);
   const [retry, setRetry] = useState(0);
+  const motionRef = useRef<DeviceTiltControls | null>(null);
+  const [motionStatus, setMotionStatus] = useState<DeviceTiltStatus>('unsupported');
 
   useEffect(() => {
     const host = surfaceRef.current;
@@ -24,6 +27,8 @@ const GaussianCover: React.FC<GaussianCoverProps> = ({ sceneUrl, alt, width, hei
     let dispose: (() => void) | undefined;
     setStatus('loading');
     setProgress(0);
+    setMotionStatus('unsupported');
+    motionRef.current = null;
     const load = async () => {
       const manifestUrl = new URL(sceneUrl, window.location.href);
       const response = await fetch(manifestUrl, { signal: controller.signal });
@@ -59,6 +64,9 @@ const GaussianCover: React.FC<GaussianCoverProps> = ({ sceneUrl, alt, width, hei
       setStatus('processing');
       dispose = await module.createGaussianViewer(host, metadata, bytes, mobile, controller.signal, () => {
         if (!controller.signal.aborted) setStatus('error');
+      }, {
+        onStatus: (value) => { if (!controller.signal.aborted) setMotionStatus(value); },
+        onControls: (controls) => { motionRef.current = controls; }
       });
       if (controller.signal.aborted) dispose();
       else setStatus('ready');
@@ -68,14 +76,34 @@ const GaussianCover: React.FC<GaussianCoverProps> = ({ sceneUrl, alt, width, hei
         controller.abort();
       }
     });
-    return () => { controller.abort(); dispose?.(); };
+    return () => { controller.abort(); dispose?.(); motionRef.current = null; };
   }, [sceneUrl, mobile, retry]);
 
   const failed = lang === 'en' ? 'Unable to load 3D' : lang === 'tw' ? '3D 載入失敗' : '3D 加载失败';
   const retryLabel = lang === 'en' ? 'Retry' : lang === 'tw' ? '重試' : '重试';
+  const motionLabel = motionStatus === 'active'
+    ? (lang === 'en' ? 'Recenter' : lang === 'tw' ? '重設視角' : '重置视角')
+    : motionStatus === 'requesting'
+      ? (lang === 'en' ? 'Connecting…' : lang === 'tw' ? '連接體感…' : '连接体感…')
+      : motionStatus === 'denied' || motionStatus === 'unavailable'
+        ? (lang === 'en' ? 'Retry motion' : lang === 'tw' ? '重試體感' : '重试体感')
+        : (lang === 'en' ? 'Enable motion' : lang === 'tw' ? '開啟體感' : '开启体感');
   return (
     <div role="img" aria-label={`${alt} — 3D`} data-gaussian-cover className="relative w-full bg-white select-none" style={{ aspectRatio: `${width} / ${height}` }}>
       <div ref={surfaceRef} className={`absolute inset-0 transition-opacity duration-200 ${status === 'ready' ? 'opacity-100' : 'opacity-0'}`} />
+      {mobile && status === 'ready' && motionStatus !== 'unsupported' && motionStatus !== 'paused' && (
+        <button type="button" aria-label={motionLabel} disabled={motionStatus === 'requesting'}
+          onPointerDown={(event) => event.stopPropagation()}
+          onMouseDown={(event) => event.stopPropagation()} onTouchStart={(event) => event.stopPropagation()}
+          onClick={(event) => {
+            event.stopPropagation();
+            if (motionStatus === 'active') motionRef.current?.recenter();
+            else void motionRef.current?.enable();
+          }}
+          className="absolute bottom-3 right-3 z-10 rounded-full bg-white/90 px-3 py-2 text-[10px] tracking-wide text-black shadow-sm disabled:opacity-60">
+          {motionLabel}
+        </button>
+      )}
       {status !== 'ready' && (
         <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 text-[10px] tracking-[0.12em] text-gray-400">
           {status === 'error' ? <>
