@@ -124,7 +124,7 @@ export const prefetchParticleImage = (
 
     const img = new Image();
     img.crossOrigin = "Anonymous";
-    img.src = src;
+    img.decoding = 'async';
 
     img.onload = () => {
       // Calculate sampling dimensions based on DISPLAY size, not intrinsic size
@@ -207,6 +207,7 @@ export const prefetchParticleImage = (
         console.warn("ParticleImage: Image load failed (404 or Network Error)", src);
         resolve({ width: 100, height: 100, points: [], error: true });
     };
+    img.src = src;
   });
 };
 
@@ -547,6 +548,11 @@ const ParticleImage: React.FC<ParticleImageProps> = ({
                 src={src} 
                 alt={alt} 
                 onLoad={handleImgLoad}
+                onError={() => setUseFallback(true)}
+                crossOrigin="anonymous"
+                loading="eager"
+                {...{ fetchpriority: 'high' }}
+                decoding="async"
                 className={`w-full h-auto block transition-opacity duration-500 ${useFallback ? 'opacity-100' : 'opacity-0'}`} 
                 draggable={false}
                 // Ensure image isn't hidden by browser logic if broken, though alt text will show

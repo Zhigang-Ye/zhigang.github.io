@@ -2,14 +2,14 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import Matter from 'matter-js';
 import { ChevronUp, ChevronDown, ChevronRight } from 'lucide-react';
-import { FALLING_FONTS_EN, FONTS_CN, FONTS_TW, FONTS_EN } from '../constants';
-import { Lang, MultiLangString } from '../types';
+import { FALLING_FONTS_EN, FONTS_CN, FONTS_TW } from '../constants';
+import { Lang } from '../types';
 
 interface PhysicsHeroProps {
   lang: Lang;
 }
 
-const PhysicsHero: React.FC<PhysicsHeroProps> = ({ lang }) => {
+const PhysicsHero: React.FC<PhysicsHeroProps> = () => {
   const sceneRef = useRef<HTMLDivElement>(null);
   const engineRef = useRef<Matter.Engine | null>(null);
   const renderRef = useRef<Matter.Render | null>(null);
@@ -50,6 +50,7 @@ const PhysicsHero: React.FC<PhysicsHeroProps> = ({ lang }) => {
   const pointerStartYRef = useRef<number>(0);
   const pointerStartXRef = useRef<number>(0);
   const isMovedRef = useRef(false);
+  const scenePointerRef = useRef<{ id: number; x: number; y: number } | null>(null);
   const [isMobileView, setIsMobileView] = useState(false);
 
   // --- Logic State Refs ---
@@ -64,20 +65,6 @@ const PhysicsHero: React.FC<PhysicsHeroProps> = ({ lang }) => {
   const MAX_MULT = 5.0;
   const MIN_BTN_SCALE = 0.6;
   // Max visual scale depends on device, handled dynamically
-
-  // Biography Text Data
-  const BIO_TEXT_DATA: MultiLangString[] = [
-    {
-      en: "Zhigang Ye (b. 1997) is an artist and researcher based in London and Hangzhou. He is currently a PhD candidate at the School of Arts & Humanities, Royal College of Art. Previously, he completed an MA in Photography at the Royal College of Art and a BA in New Media Art at Taipei National University of the Arts.",
-      cn: "叶智港 (b. 1997) 是一位常驻伦敦与杭州的艺术家和研究者。他目前是英国皇家艺术学院（RCA）艺术与人文学院的博士研究员。此前，他获得了皇家艺术学院的摄影硕士学位，以及国立台北艺术大学，中国的新媒体艺术学士学位。",
-      tw: "葉智港 (b. 1997) 是一位常駐倫敦與杭州的藝術家和研究員。他目前是英國皇家藝術學院（RCA）藝術與人文學院的博士研究員。此前，他獲得了皇家藝術學院的攝影碩士學位，以及國立臺北藝術大學，中國的新媒體藝術學士學位。"
-    },
-    {
-      en: "His practice traverses the liminal interstices between the natural and the artificial, the archive and the algorithm. Impelled by a sense of romantic violence, he employs text, images and installation to interrogate how technology mediates our perception of reality, history, and ontological fragility. Through the visualization of speculative fabulation, he destabilizes the anthropocentric scopic regime, attempting to unfold the glitches, voids, and poetic absurdities intrinsic to the contemporary digital condition.",
-      cn: "他的艺术实践游走于自然与人造、档案与算法之间日益模糊的界限。在浪漫主义暴力驱使下，他透过文字、图像及装置，质询技术如何中介我们对现实、历史和本体脆弱的感知；试着透过对思辨性虚构的视觉化解构图像的人类中心主义秩序，并敞开当代数字生存状态中固有的故障、虚空与诗意的荒诞。",
-      tw: "他的艺术实践游走于自然与人造、档案与算法之间日益模糊的界限。在浪漫主义暴力驱使下，他透过文字、图像及装置，质询技术如何中介我们对现实、历史和本体脆弱的感知；试着透过对思辨性虚构的视觉化解构图像的人类中心主义秩序，并敞开当代数字生存状态中固有的故障、虚空与诗意的荒诞。"
-    }
-  ];
 
   // Check mobile view on mount and resize
   useEffect(() => {
@@ -530,6 +517,35 @@ const PhysicsHero: React.FC<PhysicsHeroProps> = ({ lang }) => {
     }
   };
 
+  const handleScenePointerDown = (event: React.PointerEvent<HTMLDivElement>) => {
+    scenePointerRef.current = null;
+    if (!event.isPrimary || event.button !== 0 || isFlushing) return;
+    const engine = engineRef.current;
+    if (!engine) return;
+
+    const bounds = event.currentTarget.getBoundingClientRect();
+    const point = { x: event.clientX - bounds.left, y: event.clientY - bounds.top };
+    const letters = Matter.Composite.allBodies(engine.world).filter((body) => !body.isStatic);
+    // Keep letter dragging separate from tapping an empty part of the scene.
+    if (Matter.Query.point(letters, point).length > 0) return;
+    scenePointerRef.current = { id: event.pointerId, x: event.clientX, y: event.clientY };
+  };
+
+  const handleScenePointerMove = (event: React.PointerEvent<HTMLDivElement>) => {
+    const start = scenePointerRef.current;
+    if (!start || start.id !== event.pointerId) return;
+    if (Math.hypot(event.clientX - start.x, event.clientY - start.y) > 5) {
+      scenePointerRef.current = null;
+    }
+  };
+
+  const handleScenePointerUp = (event: React.PointerEvent<HTMLDivElement>) => {
+    const start = scenePointerRef.current;
+    scenePointerRef.current = null;
+    if (!start || start.id !== event.pointerId) return;
+    if (Math.hypot(event.clientX - start.x, event.clientY - start.y) <= 5) toggleFont();
+  };
+
   // --- Scale Interaction Logic (Joystick Mode) ---
   const applyScale = (newMult: number) => {
     if (newMult <= MIN_MULT || newMult >= MAX_MULT) return; 
@@ -734,38 +750,15 @@ const PhysicsHero: React.FC<PhysicsHeroProps> = ({ lang }) => {
     return style;
   };
 
-  // Styles based on language
-  const isChinese = lang === 'cn' || lang === 'tw';
-  const textOpacity = isChinese ? 'opacity-20' : 'opacity-100';
-  
-  // Font Size Logic:
-  // - Chinese Mobile: text-base (Same as body)
-  // - English Mobile: text-xs (Smaller, Doto style)
-  // - Desktop (All): text-base (Same as body)
-  const textSize = isChinese ? 'text-base' : 'text-xs md:text-base';
-
-  // If English, use Doto. If Chinese, inherit the global font (from App.tsx selection) or fallback to sans-serif
-  const textFont = isChinese ? {} : { fontFamily: '"Doto", sans-serif' };
-
   return (
     <div className="w-full h-full relative group touch-none bg-white">
-      {/* Centered Static Bio Display */}
-      <div className="absolute inset-0 z-0 pointer-events-none flex flex-col items-center justify-start md:justify-center pt-4 md:pt-0 px-8 animate-in fade-in duration-[3000ms]">
-         <div className="opacity-100 font-medium flex flex-col items-center max-w-2xl md:-translate-y-16 transition-opacity duration-1000">
-            {BIO_TEXT_DATA.map((paragraph, index) => (
-                <p 
-                    key={index}
-                    style={textFont} 
-                    className={`text-black text-center mb-4 leading-relaxed whitespace-pre-wrap tracking-wider ${textOpacity} ${textSize}`}
-                >
-                    {paragraph[lang]}
-                </p>
-            ))}
-         </div>
-      </div>
-      
        <div 
-        ref={sceneRef} 
+        ref={sceneRef}
+        onPointerDown={handleScenePointerDown}
+        onPointerMove={handleScenePointerMove}
+        onPointerUp={handleScenePointerUp}
+        onPointerCancel={() => { scenePointerRef.current = null; }}
+        onPointerLeave={() => { scenePointerRef.current = null; }}
         className="absolute inset-0 z-10 w-full h-full overflow-hidden touch-none"
         aria-label="Interactive falling letters spelling ZHIGANGYE"
       />

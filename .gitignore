@@ -3,3 +3,6 @@ dist
 .DS_Store
 .idea
 .vscode
+public/portfolio/optimized/
+public/portfolio/image-manifest.json
+__pycache__/

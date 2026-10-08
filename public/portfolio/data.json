@@ -14,7 +14,8 @@
       "tw": "檔案、攝影與生成影像編織出一段鹽漬般的海之記憶。"
     },
     "imageUrl": "portfolio/9/FP/1.jpg",
-    "folderPath": "portfolio/9"
+    "folderPath": "portfolio/9",
+    "gaussianCover": { "image": "FP/1.jpg", "scene": "GS/scene.json" }
   },
   {
     "id": "1",
@@ -30,7 +31,8 @@
       "tw": "探索缺失的製圖學。"
     },
     "imageUrl": "https://picsum.photos/1200/600?random=1",
-    "folderPath": "portfolio/1"
+    "folderPath": "portfolio/1",
+    "gaussianCover": { "image": "FP/1.jpg", "scene": "GS/scene.json" }
   },
   {
     "id": "2",
@@ -63,7 +65,8 @@
       "tw": "探索記憶與在場之間距離的系列作品。"
     },
     "imageUrl": "https://picsum.photos/1000/1000?random=3",
-    "folderPath": "portfolio/3"
+    "folderPath": "portfolio/3",
+    "gaussianCover": { "image": "FP/1.jpg", "scene": "GS/scene.json" }
   },
   {
     "id": "4",
@@ -79,7 +82,8 @@
       "tw": "人造自然與數字有機生長。"
     },
     "imageUrl": "https://picsum.photos/1200/800?random=4",
-    "folderPath": "portfolio/4"
+    "folderPath": "portfolio/4",
+    "gaussianCover": { "image": "FP/1.jpg", "scene": "GS/scene.json" }
   },
   {
     "id": "5",
@@ -111,23 +115,8 @@
       "tw": "寂靜與流沙的景觀。"
     },
     "imageUrl": "https://picsum.photos/1200/800?random=6",
-    "folderPath": "portfolio/6"
-  },
-  {
-    "id": "7",
-    "title": {
-      "en": "Cerulean Reverie",
-      "cn": "蔚蓝遐想",
-      "tw": "蔚藍遐想"
-    },
-    "year": "2024",
-    "description": {
-      "en": "Dreams dissolved in blue.",
-      "cn": "溶解在蓝色中的梦。",
-      "tw": "溶解在藍色中的夢。"
-    },
-    "imageUrl": "https://picsum.photos/800/1200?random=7",
-    "folderPath": "portfolio/7"
+    "folderPath": "portfolio/6",
+    "gaussianCover": { "image": "FP/1.jpg", "scene": "GS/scene.json" }
   },
   {
     "id": "8",

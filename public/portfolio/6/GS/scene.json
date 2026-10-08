@@ -1,0 +1,16 @@
+{
+  "src": "cover-d7ad18e5d11b.spz",
+  "width": 460,
+  "height": 336,
+  "fov": 46.08398502598492,
+  "focusDepth": 1.2548828125,
+  "pointCount": 1174583,
+  "bytes": 11609685,
+  "mobile": {
+    "src": "cover-a6c266af9122.spz",
+    "pointCount": 147520,
+    "bytes": 1841823
+  },
+  "generator": "Apple SHARP (single-image research preview)",
+  "sourceSha256": "87be91f3b1b4fb94b95811947209107445432da2fb38acd5302966f3f98d46ac"
+}

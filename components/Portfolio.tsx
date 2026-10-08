@@ -2,7 +2,9 @@
 import React, { useEffect, useState, useRef, useCallback, useLayoutEffect } from 'react';
 import { Project, Lang, MultiLangString } from '../types';
 import { X, ChevronDown } from 'lucide-react';
-import ParticleImage, { prefetchParticleImage } from './ParticleImage';
+import GaussianCover from './GaussianCover';
+import ResponsiveImage from './ResponsiveImage';
+import { getImageMetadata, getCoverSource, PortfolioImageManifest, resolveProjectImage } from '../utils/portfolioImages';
 import { TRANSLATIONS } from '../constants';
 
 interface PortfolioProps {
@@ -40,25 +42,6 @@ type OpenProjectOptions = {
   fromRoute?: boolean;
 };
 
-type ParticlePreset = {
-  gap: number;
-  radius: number;
-  jitterSampling: boolean;
-  sizeMix: number;
-  directionalFlow: boolean;
-};
-
-const PARTICLE_PRESETS = [
-  { gap: 7, radius: 3.0, jitterSampling: false, sizeMix: 0.9, directionalFlow: false },
-  { gap: 2.5, radius: 1.7, jitterSampling: true, sizeMix: 0, directionalFlow: false },
-  { gap: 7.5, radius: 4.0, jitterSampling: true, sizeMix: 1.0, directionalFlow: false },
-  { gap: 10, radius: 2.8, jitterSampling: true, sizeMix: 0, directionalFlow: false },
-  { gap: 6, radius: 2.8, jitterSampling: false, sizeMix: 0, directionalFlow: false },
-] satisfies ParticlePreset[];
-
-const pickParticlePreset = (): ParticlePreset =>
-  PARTICLE_PRESETS[Math.floor(Math.random() * PARTICLE_PRESETS.length)];
-
 const normalizeSlug = (value: string) => value.toLowerCase().replace(/[^a-z0-9]+/g, '');
 
 const getProjectSlug = (project: Project) => {
@@ -78,6 +61,8 @@ const Portfolio: React.FC<PortfolioProps> = ({ lang, toggleLang, activeSlug = nu
 
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
+  const [imageManifest, setImageManifest] = useState<PortfolioImageManifest | null>(null);
+  const [coverReadySrc, setCoverReadySrc] = useState('');
   
   const [displayIndex, setDisplayIndex] = useState(0);
   
@@ -85,10 +70,7 @@ const Portfolio: React.FC<PortfolioProps> = ({ lang, toggleLang, activeSlug = nu
   const [detailContent, setDetailContent] = useState<ProjectDetailData | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
   const [imageAspectRatio, setImageAspectRatio] = useState<number | undefined>(undefined);
-  const [detailImagesReady, setDetailImagesReady] = useState(false);
-  const [sliderLoading, setSliderLoading] = useState(true);
-  const [lowResAvailable, setLowResAvailable] = useState<Record<string, boolean>>({});
-  const [hiResLoadedMap, setHiResLoadedMap] = useState<Record<number, boolean>>({});
+  const [requestedSlides, setRequestedSlides] = useState<Set<number>>(() => new Set([0, 1]));
   const [sliderIndex, setSliderIndex] = useState(0);
 
   // Index Overlay State
@@ -104,9 +86,7 @@ const Portfolio: React.FC<PortfolioProps> = ({ lang, toggleLang, activeSlug = nu
   const [galleryWidth, setGalleryWidth] = useState(0);
   const [galleryRows, setGalleryRows] = useState<GalleryRow[]>([]);
   const [isGalleryOpen, setIsGalleryOpen] = useState(false); // Default collapsed
-  const [lightboxHiResSrc, setLightboxHiResSrc] = useState<string | null>(null);
-  const thumbCacheRef = useRef<Record<string, MeasuredImage[]>>({});
-  const fpDiscoveryCacheRef = useRef<Record<string, string[]>>({});
+  const detailRequestRef = useRef<AbortController | null>(null);
   const mobileSlideStartX = useRef<number | null>(null);
   const mobileSlideCurrentX = useRef<number | null>(null);
   const isProgrammaticScroll = useRef(false);
@@ -132,27 +112,9 @@ const Portfolio: React.FC<PortfolioProps> = ({ lang, toggleLang, activeSlug = nu
   const imageScrollRef = useRef<HTMLDivElement>(null);
 
   // Device Check
-  const [isMobile, setIsMobile] = useState(false);
+  const [isMobile, setIsMobile] = useState(() => window.innerWidth < 768);
 
-  // Particle tweak controls (temporary UI)
-  const initialParticlePresetRef = useRef<ParticlePreset | null>(null);
-  if (!initialParticlePresetRef.current) {
-    initialParticlePresetRef.current = pickParticlePreset();
-  }
-
-  const [particleGap, setParticleGap] = useState(initialParticlePresetRef.current.gap);
-  const [particleDotRadius, setParticleDotRadius] = useState(initialParticlePresetRef.current.radius);
-  const [particleJitterSampling, setParticleJitterSampling] = useState(initialParticlePresetRef.current.jitterSampling);
-  const [particleSizeMix, setParticleSizeMix] = useState(initialParticlePresetRef.current.sizeMix);
-  const [particleDirectionalFlow, setParticleDirectionalFlow] = useState(initialParticlePresetRef.current.directionalFlow);
   const [fpIndexMap, setFpIndexMap] = useState<Record<string, number>>({});
-  const [showTestPanel, setShowTestPanel] = useState(false);
-  const langHoldTimerRef = useRef<number | null>(null);
-  const langLongPressRef = useRef(false);
-  const langToggleGuardRef = useRef(0);
-  const COLOR_BOOST = { mult: 1.2, gamma: 1.2 };
-  const [slideDirection, setSlideDirection] = useState<'next' | 'prev' | null>(null);
-  const [particleOffset, setParticleOffset] = useState(0);
   const autoOpenTimerRef = useRef<number | null>(null);
   const DEFAULT_SLIDER_RATIO = 3 / 2;
   const SLIDE_GAP_VAR = 'clamp(10px, 2.2vw, 18px)';
@@ -178,100 +140,54 @@ const Portfolio: React.FC<PortfolioProps> = ({ lang, toggleLang, activeSlug = nu
 
   // Text collapsed by default; will open manually
 
-  // Particle slide-in animation based on direction
   useEffect(() => {
-    if (!slideDirection) return;
-    const offset = slideDirection === 'next' ? 40 : -40;
-    setParticleOffset(offset);
-    requestAnimationFrame(() => setParticleOffset(0));
-    const timer = setTimeout(() => setSlideDirection(null), 450);
-    return () => clearTimeout(timer);
-  }, [displayIndex, slideDirection]);
-
-  // Discover FP images named 1.jpg, 2.jpg... inside each project folder (stop at first non-image)
-  const discoverFPImages = useCallback(async (folderPath: string, maxScan: number = 1) => {
-    const found: string[] = [];
-    for (let i = 1; i <= maxScan; i++) {
-      const candidateRelative = `FP/${i}.jpg`;
-      const candidateUrl = `${folderPath}/${candidateRelative}`;
-      try {
-        const res = await fetch(candidateUrl, { method: 'HEAD' });
-        const ct = res.headers.get('content-type') || '';
-        if (res.ok && ct.startsWith('image')) {
-          found.push(candidateRelative);
-          continue;
-        }
-      } catch (e) {
-        // Ignore network/HEAD errors and stop
-      }
-      break; // stop scanning on first miss to avoid extra requests
-    }
-    return found;
-  }, []);
-
-  useEffect(() => {
+    const controller = new AbortController();
     const fetchData = async () => {
       try {
-        const manifestRes = await fetch('./manifest.json');
+        const [manifestRes, imagesRes] = await Promise.all([
+          fetch('./manifest.json', { signal: controller.signal }),
+          fetch('./portfolio/image-manifest.json', { signal: controller.signal })
+        ]);
+        if (!imagesRes.ok) throw new Error('Image manifest unavailable; run npm run images:optimize.');
         const manifest = await manifestRes.json();
-        
-        const portfolioRes = await fetch(manifest.portfolio);
-        const data = await portfolioRes.json();
-
-        const resolveFPForProject = async (project: Project): Promise<Project> => {
-            // Cache discovery per project to avoid repeat HEADs
-            if (!fpDiscoveryCacheRef.current[project.id]) {
-              fpDiscoveryCacheRef.current[project.id] = project.fpImages || [];
-            }
-
-            let fpList = fpDiscoveryCacheRef.current[project.id];
-
-            // If no explicit list, try to discover numbered images in FP folder (1.jpg only)
-            if ((!fpList || fpList.length === 0) && project.folderPath) {
-                fpList = await discoverFPImages(project.folderPath);
-                fpDiscoveryCacheRef.current[project.id] = fpList;
-            }
-
-            if (fpList.length > 0) {
-                const pick = fpList[Math.floor(Math.random() * fpList.length)];
-                const resolved = (project.folderPath && !pick.startsWith('http') && !pick.startsWith('/'))
-                    ? `${project.folderPath}/${pick}`
-                    : pick;
-                return { ...project, fpImages: fpList, imageUrl: resolved };
-            }
-
-            return project;
-        };
-
-        const visibleProjects = data.filter((project: Project) => !project.hidden);
-        const enriched = await Promise.all(visibleProjects.map(resolveFPForProject));
-        
+        const images: PortfolioImageManifest = await imagesRes.json();
+        const portfolioRes = await fetch(manifest.portfolio, { signal: controller.signal });
+        const data: Project[] = await portfolioRes.json();
+        const enriched = data.filter((project) => !project.hidden).sort((a, b) =>
+          b.year.localeCompare(a.year, undefined, { numeric: true })
+        ).map((project) => {
+          const fpImages = project.fpImages?.length
+            ? project.fpImages : images.projects[project.folderPath || '']?.fpImages || [];
+          return { ...project, fpImages };
+        });
+        if (controller.signal.aborted) return;
+        setImageManifest(images);
         setProjects(enriched);
-
-        // Randomly select starting project for the Carousel View
-        if (enriched.length > 0) {
-            setDisplayIndex(Math.floor(Math.random() * enriched.length));
-        }
-
-        setLoading(false);
+        setDisplayIndex(0);
       } catch (error) {
-        console.error('Error loading portfolio:', error);
-        setLoading(false);
+        if (!controller.signal.aborted) console.error('Error loading portfolio:', error);
+      } finally {
+        if (!controller.signal.aborted) setLoading(false);
       }
     };
     fetchData();
+    return () => controller.abort();
   }, []);
 
-  const getProjectParticleSrc = useCallback((project: Project) => {
-    if (!project) return '';
+  useEffect(() => () => detailRequestRef.current?.abort(), []);
+
+  const getProjectCoverOriginalSrc = useCallback((project: Project) => {
     const fpList = project.fpImages || [];
-    if (fpList.length > 0 && project.folderPath) {
-        const currentIdx = fpIndexMap[project.id] ?? 0;
-        const pick = fpList[currentIdx % fpList.length];
-        return (pick.startsWith('http') || pick.startsWith('/')) ? pick : `${project.folderPath}/${pick}`;
-    }
-    return project.imageUrl;
+    const pick = fpList.length ? fpList[(fpIndexMap[project.id] ?? 0) % fpList.length] : null;
+    return pick ? resolveProjectImage(project.folderPath, pick) : project.imageUrl;
   }, [fpIndexMap]);
+
+  const getProjectCoverSrc = useCallback((project: Project) =>
+    getCoverSource(imageManifest, getProjectCoverOriginalSrc(project)),
+  [getProjectCoverOriginalSrc, imageManifest]);
+
+  const activeCoverSrc = projects[displayIndex] ? getProjectCoverSrc(projects[displayIndex]) : '';
+  const handleCoverLoaded = useCallback(() => setCoverReadySrc(activeCoverSrc), [activeCoverSrc]);
 
   const cycleFpImage = useCallback((projectId: string) => {
     setFpIndexMap(prev => {
@@ -282,34 +198,32 @@ const Portfolio: React.FC<PortfolioProps> = ({ lang, toggleLang, activeSlug = nu
   }, []);
 
   useEffect(() => {
-    if (!loading && projects.length > 0) {
-      const preloadParticles = async () => {
-        const estimatedWidth = Math.min(window.innerWidth, 2000) * 0.8;
-        
-        for (let i = 0; i < projects.length; i++) {
-            const idx = (displayIndex + 1 + i) % projects.length;
-            if (idx === displayIndex) continue;
+    // Wait for the visible cover before warming just the next cover. Avoid
+    // background traffic on constrained connections and while a project is open.
+    const connection = (navigator as Navigator & {
+      connection?: { saveData?: boolean; effectiveType?: string; downlink?: number };
+    }).connection;
+    if (loading || selectedProject || activeSlug || projects.length < 2 || coverReadySrc !== activeCoverSrc || projects[displayIndex]?.gaussianCover) return;
+    if (connection?.saveData || /(^|-)2g$/.test(connection?.effectiveType || '') || (connection?.downlink ?? 10) < 1.5) return;
+    const next = projects[(displayIndex + 1) % projects.length];
+    const timer = window.setTimeout(() => {
+      const image = new Image();
+      image.decoding = 'async';
+      image.fetchPriority = 'low';
+      image.src = getProjectCoverSrc(next);
+    }, 500);
+    return () => window.clearTimeout(timer);
+  }, [loading, projects, displayIndex, selectedProject, activeSlug, coverReadySrc, activeCoverSrc, getProjectCoverSrc]);
 
-            const project = projects[idx];
-            const src = getProjectParticleSrc(project);
-            if (project && src) {
-                try {
-                    await prefetchParticleImage(src, estimatedWidth, particleGap, COLOR_BOOST, particleJitterSampling);
-                    await new Promise(resolve => setTimeout(resolve, 200));
-                } catch (e) {
-                    console.warn(`Failed to preload particles for ${project.id}`, e);
-                }
-            }
-        }
-      };
-
-      const timer = setTimeout(() => {
-          preloadParticles();
-      }, 1000);
-
-      return () => clearTimeout(timer);
-    }
-  }, [loading, projects, displayIndex, particleGap, COLOR_BOOST, getProjectParticleSrc, particleJitterSampling]);
+  useEffect(() => {
+    setRequestedSlides((previous) => {
+      const next = new Set(previous);
+      for (const index of [sliderIndex - 1, sliderIndex, sliderIndex + 1]) {
+        if (index >= 0) next.add(index);
+      }
+      return next.size === previous.size ? previous : next;
+    });
+  }, [sliderIndex]);
 
   const getLangString = (obj: MultiLangString) => {
     return obj[lang] || obj['en'];
@@ -321,7 +235,7 @@ const Portfolio: React.FC<PortfolioProps> = ({ lang, toggleLang, activeSlug = nu
     return (match && match[2].length === 11) ? match[2] : null;
   };
 
-  // --- Mobile slide helpers (low-res -> hi-res) ---
+  // --- Mobile slide helpers ---
   const handleMobileSlideStart = (x: number) => {
     mobileSlideStartX.current = x;
     mobileSlideCurrentX.current = x;
@@ -340,7 +254,7 @@ const Portfolio: React.FC<PortfolioProps> = ({ lang, toggleLang, activeSlug = nu
     }
     const delta = mobileSlideCurrentX.current - mobileSlideStartX.current;
     const threshold = 40;
-    const sliderImages = detailContent?.imagesA || detailContent?.images || [];
+    const sliderImages = (detailContent?.imagesA?.length ? detailContent.imagesA : detailContent?.images) || [];
     const totalSlides = sliderImages.length;
     if (delta > threshold && totalSlides > 1) {
       setSliderIndex((prev) => (
@@ -365,7 +279,7 @@ const Portfolio: React.FC<PortfolioProps> = ({ lang, toggleLang, activeSlug = nu
     scrollSyncTimerRef.current = window.setTimeout(() => {
       const width = container.clientWidth || 1;
       const idx = Math.round(container.scrollLeft / width);
-      const images = detailContent?.imagesA || detailContent?.images || [];
+      const images = (detailContent?.imagesA?.length ? detailContent.imagesA : detailContent?.images) || [];
       const clamped = Math.max(0, Math.min(images.length - 1, idx));
       if (clamped !== sliderIndex) {
         setSliderIndex(clamped);
@@ -373,23 +287,7 @@ const Portfolio: React.FC<PortfolioProps> = ({ lang, toggleLang, activeSlug = nu
     }, 80);
   };
 
-  // Build low-res paths from generated C folder
-  const getLowResAUrl = useCallback((project: Project | null, img: string) => {
-    if (!project?.folderPath) return img;
-    if (img.startsWith('http') || img.startsWith('/')) return img;
-    const base = img.split('/').pop()?.split('.').slice(0, -1).join('.') || 'image';
-    return `${project.folderPath}/C/${base}.jpg`;
-  }, []);
-
-  const getLowResBUrl = useCallback((project: Project | null, img: string) => {
-    if (!project?.folderPath) return img;
-    if (img.startsWith('http') || img.startsWith('/')) return img;
-    const base = img.split('/').pop()?.split('.').slice(0, -1).join('.') || 'image';
-    return `${project.folderPath}/C/B/${base}.jpg`;
-  }, []);
-
   const handleNext = () => {
-    setSlideDirection('next');
     setDisplayIndex((prev) => {
       const nextIdx = (prev + 1) % projects.length;
       const nextProject = projects[nextIdx];
@@ -401,7 +299,6 @@ const Portfolio: React.FC<PortfolioProps> = ({ lang, toggleLang, activeSlug = nu
   };
 
   const handlePrev = () => {
-    setSlideDirection('prev');
     setDisplayIndex((prev) => {
       const nextIdx = (prev - 1 + projects.length) % projects.length;
       const nextProject = projects[nextIdx];
@@ -414,7 +311,7 @@ const Portfolio: React.FC<PortfolioProps> = ({ lang, toggleLang, activeSlug = nu
 
   const changeSlide = (nextIdx: number) => {
       if (!detailContent) return;
-      const images = detailContent.imagesA || detailContent.images || [];
+      const images = (detailContent.imagesA?.length ? detailContent.imagesA : detailContent.images) || [];
       if (images.length === 0) return;
       const total = images.length;
       const target = ((nextIdx % total) + total) % total;
@@ -481,86 +378,7 @@ const Portfolio: React.FC<PortfolioProps> = ({ lang, toggleLang, activeSlug = nu
     return () => window.removeEventListener('keydown', handleKey);
   }, [projects.length]);
 
-  // Long press to toggle test panel via language button (desktop/mobile)
-  const LONG_PRESS_MS = 2000;
-  const handleLangPointerDown = (e?: React.SyntheticEvent) => {
-    e?.preventDefault();
-    langLongPressRef.current = false;
-    if (langHoldTimerRef.current) clearTimeout(langHoldTimerRef.current);
-    langHoldTimerRef.current = window.setTimeout(() => {
-      langLongPressRef.current = true;
-      setShowTestPanel(true);
-    }, LONG_PRESS_MS);
-  };
-  const handleLangTouchStart = (e: React.TouchEvent) => handleLangPointerDown(e);
-  const clearLangHold = () => {
-    if (langHoldTimerRef.current) {
-      clearTimeout(langHoldTimerRef.current);
-      langHoldTimerRef.current = null;
-    }
-  };
-  const shouldToggleLang = () => {
-    const now = Date.now();
-    if (now - langToggleGuardRef.current < 400) return false;
-    langToggleGuardRef.current = now;
-    return true;
-  };
-  const handleLangPointerUp = () => {
-    clearLangHold();
-    if (!langLongPressRef.current) {
-      if (!shouldToggleLang()) return;
-      toggleLang();
-    }
-  };
-  const handleLangTouchEnd = () => {
-    clearLangHold();
-    if (!langLongPressRef.current) {
-      if (!shouldToggleLang()) return;
-      toggleLang();
-    }
-  };
-
-  // Keyboard combo A+B to open test panel
-  useEffect(() => {
-    const pressed = new Set<string>();
-    const down = (e: KeyboardEvent) => {
-      pressed.add(e.key.toLowerCase());
-      if (pressed.has('a') && pressed.has('b')) {
-        setShowTestPanel(true);
-      }
-    };
-    const up = (e: KeyboardEvent) => {
-      pressed.delete(e.key.toLowerCase());
-    };
-    window.addEventListener('keydown', down);
-    window.addEventListener('keyup', up);
-    return () => {
-      window.removeEventListener('keydown', down);
-      window.removeEventListener('keyup', up);
-    };
-  }, []);
-
-  const langButtonProps = {
-    onPointerDown: handleLangPointerDown,
-    onPointerUp: handleLangPointerUp,
-    onPointerLeave: clearLangHold,
-    onPointerCancel: clearLangHold,
-    onTouchStart: handleLangTouchStart,
-    onTouchEnd: handleLangTouchEnd,
-    onTouchCancel: clearLangHold,
-    onContextMenu: (e: React.MouseEvent) => e.preventDefault(),
-    onClick: (e: React.MouseEvent) => {
-      if (langLongPressRef.current) { 
-        e.preventDefault(); 
-        return; 
-      }
-      if (!shouldToggleLang()) {
-        e.preventDefault();
-        return;
-      }
-      toggleLang();
-    }
-  };
+  const langButtonProps = { onClick: toggleLang };
 
   // --- Project Open Logic ---
   const handleProjectClick = useCallback(async (project: Project, options?: OpenProjectOptions) => {
@@ -579,14 +397,7 @@ const Portfolio: React.FC<PortfolioProps> = ({ lang, toggleLang, activeSlug = nu
     setGalleryRows([]);
     setShowIndex(false); 
     setIsGalleryOpen(false); // Reset gallery state
-    setDetailImagesReady(false);
-    setSliderLoading(false);
-    setLowResAvailable((prev) => {
-      const next = { ...prev };
-      if (project?.id) delete next[project.id];
-      return next;
-    });
-    setHiResLoadedMap({});
+    setRequestedSlides(new Set([0, 1]));
     setSliderIndex(0);
     mobileSlideStartX.current = null;
     mobileSlideCurrentX.current = null;
@@ -595,140 +406,44 @@ const Portfolio: React.FC<PortfolioProps> = ({ lang, toggleLang, activeSlug = nu
     
     setLightboxIndex(null);
 
-    const discoverImages = async (folderPath: string, sub: 'A' | 'B', maxScan: number = 30) => {
-        const exts = ['jpg', 'jpeg', 'png', 'webp'];
-        const found: string[] = [];
-        for (let i = 1; i <= maxScan; i++) {
-            let matched = false;
-            for (const ext of exts) {
-                const candidate = `${folderPath}/${sub}/${i}.${ext}`;
-                try {
-                    const res = await fetch(candidate, { method: 'HEAD' });
-                    const ct = res.headers.get('content-type') || '';
-                    if (res.ok && ct.startsWith('image')) {
-                        found.push(`${sub}/${i}.${ext}`);
-                        matched = true;
-                        break;
-                    }
-                } catch (e) {
-                    // ignore
-                }
-            }
-            if (!matched) break; // stop scanning on first miss
-        }
-        return found;
-    };
-
-    // Helper to get full URL
-    const getFullUrl = (img: string) => {
-        const currentFolderPath = project.folderPath || '';
-        return (img.startsWith('http') || img.startsWith('/')) 
-            ? img 
-            : `${currentFolderPath}/${img}`;
-    };
+    detailRequestRef.current?.abort();
+    const controller = new AbortController();
+    detailRequestRef.current = controller;
+    const getFullUrl = (image: string) => resolveProjectImage(project.folderPath, image);
 
     try {
-        let content: ProjectDetailData;
-
-        if (project.folderPath) {
-            const res = await fetch(`${project.folderPath}/data.json`);
-            if (res.ok) {
-                content = await res.json();
-            } else {
-                content = {
-                    images: [project.imageUrl],
-                    text: project.description
-                };
-            }
-        } else {
-            content = {
-                images: [project.imageUrl],
-                text: project.description
-            };
-        }
-
-        // Auto-discover A/B if missing or empty
-        if (project.folderPath) {
-            if (!content.imagesA || content.imagesA.length === 0) {
-                content.imagesA = await discoverImages(project.folderPath, 'A');
-            }
-            if (!content.imagesB || content.imagesB.length === 0) {
-                content.imagesB = await discoverImages(project.folderPath, 'B');
-            }
-        }
-
-        // --- ASPECT RATIO LOGIC (Folder A - Carousel) ---
-        // Priority: imagesA -> images (fallback)
-            const sliderImages = content.imagesA || content.images || [];
-        if (sliderImages.length > 0) {
-            const firstImgSrc = getFullUrl(sliderImages[0]);
-            const img = new Image();
-            img.src = firstImgSrc;
-            img.onload = () => {
-                const ratio = img.naturalWidth / img.naturalHeight;
-                setImageAspectRatio(ratio);
-                setSliderLoading(false);
-                setDetailImagesReady(true);
-            };
-            img.onerror = () => {
-                setImageAspectRatio(16/9); 
-                setSliderLoading(false);
-                setDetailImagesReady(true);
-            };
-        } else {
-            setImageAspectRatio(16/9);
-        }
-
-        // --- PRELOAD THUMBNAILS RATIOS (Folder B - Thumbnails) ---
-        // Priority: imagesB -> empty
-        const thumbs = content.imagesB || [];
-        if (thumbs.length > 0) {
-             // If cached, use directly
-             const cached = thumbCacheRef.current[project.id];
-             if (cached && cached.length > 0) {
-                setThumbDims(cached);
-             } else {
-                // Immediate placeholder to render gallery alongside text
-             const placeholderDims: MeasuredImage[] = thumbs.map((srcRaw, idx) => {
-                    const src = getLowResBUrl(project, srcRaw);
-                   return { src, fullSrc: getFullUrl(srcRaw), ratio: 1, originalIndex: idx };
-                });
-                setThumbDims(placeholderDims);
-
-                const dimsPromise = thumbs.map((srcRaw, idx) => {
-                  return new Promise<MeasuredImage | null>((resolve) => {
-                    const src = getFullUrl(srcRaw);
-                    const img = new Image();
-                    img.src = src;
-                    img.onload = () => {
-                      const ratio = img.naturalWidth && img.naturalHeight ? (img.naturalWidth / img.naturalHeight) : 1;
-                      resolve({ src: getLowResBUrl(project, srcRaw), fullSrc: src, ratio, originalIndex: idx });
-                    };
-                    img.onerror = () => resolve(null);
-                  });
-                });
-                Promise.all(dimsPromise).then(loadedDims => {
-                    const finalDims = loadedDims.filter((d): d is MeasuredImage => Boolean(d));
-                    setThumbDims(finalDims);
-                    thumbCacheRef.current[project.id] = finalDims;
-                });
-             }
-        }
-
-        setDetailContent(content);
-    } catch (e) {
-        console.warn("Could not load detail data, using fallback", e);
-        setDetailContent({
-            images: [project.imageUrl],
-            text: project.description
-        });
-        setImageAspectRatio(16/9);
+      let content: ProjectDetailData = { images: [project.imageUrl], text: project.description };
+      if (project.folderPath) {
+        const response = await fetch(`${project.folderPath}/data.json`, { signal: controller.signal });
+        if (response.ok) content = await response.json();
+        const discovered = imageManifest?.projects[project.folderPath];
+        if (!content.imagesA?.length) content.imagesA = discovered?.imagesA || [];
+        if (!content.imagesB?.length) content.imagesB = discovered?.imagesB || [];
+      }
+      if (controller.signal.aborted) return;
+      const slides = content.imagesA?.length ? content.imagesA : content.images || [];
+      const first = slides[0] && getImageMetadata(imageManifest, getFullUrl(slides[0]));
+      setImageAspectRatio(first ? first.width / first.height : DEFAULT_SLIDER_RATIO);
+      // Dimensions come from the build manifest. Measuring the gallery no
+      // longer downloads every original before the user even opens it.
+      setThumbDims((content.imagesB || []).map((image, index) => {
+        const src = getFullUrl(image);
+        const metadata = getImageMetadata(imageManifest, src);
+        return { src, fullSrc: src, ratio: metadata ? metadata.width / metadata.height : 1, originalIndex: index };
+      }));
+      setDetailContent(content);
+    } catch (error) {
+      if (controller.signal.aborted) return;
+      console.warn('Could not load detail data, using fallback', error);
+      setDetailContent({ images: [project.imageUrl], text: project.description });
+      setImageAspectRatio(DEFAULT_SLIDER_RATIO);
     } finally {
-        setDetailLoading(false);
+      if (!controller.signal.aborted) setDetailLoading(false);
     }
-  }, [getLowResBUrl, onSlugChange]);
+  }, [imageManifest, onSlugChange]);
 
   const closeProject = useCallback(() => {
+    detailRequestRef.current?.abort();
     setSelectedProject(null);
     setDetailContent(null);
     setThumbDims([]);
@@ -785,7 +500,7 @@ const Portfolio: React.FC<PortfolioProps> = ({ lang, toggleLang, activeSlug = nu
   // Sync scroll position to current index
   useEffect(() => {
     if (!detailContent) return;
-    const images = detailContent.imagesA || detailContent.images || [];
+    const images = (detailContent.imagesA?.length ? detailContent.imagesA : detailContent.images) || [];
     if (images.length === 0) return;
     const container = imageScrollRef.current;
     if (!container) return;
@@ -971,24 +686,8 @@ const Portfolio: React.FC<PortfolioProps> = ({ lang, toggleLang, activeSlug = nu
       // Wait for animation to finish before removing from DOM
       setTimeout(() => {
           setLightboxIndex(null);
-          setLightboxHiResSrc(null);
       }, 500);
   };
-
-  // Preload hi-res when lightbox index changes
-  useEffect(() => {
-      if (lightboxIndex === null || !thumbDims[lightboxIndex]) {
-        setLightboxHiResSrc(null);
-        return;
-      }
-      const entry = thumbDims[lightboxIndex];
-      setLightboxHiResSrc(entry.src); // start with thumb/placeholder
-      if (entry.fullSrc && entry.fullSrc !== entry.src) {
-        const img = new Image();
-        img.src = entry.fullSrc;
-        img.onload = () => setLightboxHiResSrc(entry.fullSrc!);
-      }
-  }, [lightboxIndex, thumbDims]);
 
   // Calculate position/size for the lightbox image
   const getLightboxStyle = () => {
@@ -1047,22 +746,49 @@ const Portfolio: React.FC<PortfolioProps> = ({ lang, toggleLang, activeSlug = nu
 
   const secondaryStyle = { fontFamily: '"Doto", sans-serif' };
   
-  if (loading) {
-     return <div className="w-full min-h-screen bg-white" />;
+  if (loading || projects.length === 0) {
+    return <div className="w-full min-h-screen bg-white">{!loading && <p className="p-6">Unable to load projects. Please refresh.</p>}</div>;
   }
 
   // --- DETAIL VIEW RENDER ---
   if (selectedProject) {
-    const getFullImageUrl = (img: string) => {
-        const currentFolderPath = selectedProject?.folderPath || '';
-        return (img.startsWith('http') || img.startsWith('/')) 
-            ? img 
-            : `${currentFolderPath}/${img}`;
-    };
+    const getFullImageUrl = (image: string) => resolveProjectImage(selectedProject.folderPath, image);
     
     // Use imagesA for slider, fallback to images (legacy support if A missing)
-    const sliderImages = detailContent?.imagesA || detailContent?.images || [];
+    const sliderImages = (detailContent?.imagesA?.length ? detailContent.imagesA : detailContent?.images) || [];
     const youtubeId = detailContent?.youtube ? getYouTubeId(detailContent.youtube) : null;
+
+    const renderSlide = (image: string, index: number) => {
+      const src = getFullImageUrl(image);
+      return (
+        <div
+          key={index}
+          className="h-full flex-shrink-0 snap-start flex items-center justify-center bg-white"
+          style={sliderItemStyle}
+        >
+          <div className="relative w-full h-full">
+            {requestedSlides.has(index) && (
+              <ResponsiveImage
+                src={src}
+                image={getImageMetadata(imageManifest, src)}
+                sizes={isMobile ? 'calc(100vw - 48px)' : '70vw'}
+                alt={`${selectedProject.title.en} — ${index + 1}`}
+                className="absolute inset-0 w-full h-full object-contain select-none block"
+                loading={index === sliderIndex ? 'eager' : 'lazy'}
+                fetchPriority={index === sliderIndex ? 'high' : 'low'}
+                draggable={false}
+                onLoad={(event) => {
+                  if (index === 0 && !getImageMetadata(imageManifest, src)) {
+                    const { naturalWidth, naturalHeight } = event.currentTarget;
+                    if (naturalWidth && naturalHeight) setImageAspectRatio(naturalWidth / naturalHeight);
+                  }
+                }}
+              />
+            )}
+          </div>
+        </div>
+      );
+    };
 
     // Pointer event logic for Index/Back buttons (Mobile)
     const navPointerEvents = (visible: boolean) => visible ? 'pointer-events-auto' : 'pointer-events-none';
@@ -1108,8 +834,13 @@ const Portfolio: React.FC<PortfolioProps> = ({ lang, toggleLang, activeSlug = nu
                 onTouchEnd={handleLightboxDragEnd}
             >
                  {/* Animated Image */}
-                <img 
-                    src={lightboxHiResSrc || thumbDims[lightboxIndex].src}
+                <ResponsiveImage
+                    key={thumbDims[lightboxIndex].src}
+                    src={thumbDims[lightboxIndex].fullSrc || thumbDims[lightboxIndex].src}
+                    image={getImageMetadata(imageManifest, thumbDims[lightboxIndex].fullSrc || thumbDims[lightboxIndex].src)}
+                    sizes={`${Math.ceil(Math.min(window.innerWidth - 40, (window.innerHeight - 40) * thumbDims[lightboxIndex].ratio))}px`}
+                    loading="eager"
+                    fetchPriority="high"
                     alt="Full View"
                     className="absolute object-contain shadow-xl block"
                     style={{ 
@@ -1142,7 +873,7 @@ const Portfolio: React.FC<PortfolioProps> = ({ lang, toggleLang, activeSlug = nu
     if (isMobile) {
         // Logic to hide bottom controls if top controls are visible
         const showBottomControls = isAtBottom && !isAtTop;
-        const sliderImages = detailContent?.imagesA || detailContent?.images || [];
+        const sliderImages = (detailContent?.imagesA?.length ? detailContent.imagesA : detailContent?.images) || [];
         const totalSlides = sliderImages.length;
 
         return (
@@ -1239,61 +970,7 @@ const Portfolio: React.FC<PortfolioProps> = ({ lang, toggleLang, activeSlug = nu
                                             onMouseUp={handleMobileSlideEnd}
                                             onMouseLeave={() => { if (mobileSlideStartX.current !== null) handleMobileSlideEnd(); }}
                                           >
-                                            {sliderImages.map((img, idx) => {
-                                                const hi = getFullImageUrl(img);
-                                                const low = getLowResAUrl(selectedProject, img);
-                                                const showHi = hiResLoadedMap[idx];
-                                                const allowLow = selectedProject?.id ? lowResAvailable[selectedProject.id] !== false : true;
-                                                const showLow = allowLow;
-                                                const shouldShowHi = showHi || !allowLow;
-                                                return (
-                                                    <div 
-                                                      key={idx} 
-                                                      className="h-full flex-shrink-0 snap-start flex items-center justify-center bg-white"
-                                                      style={sliderItemStyle}
-                                                    >
-                                                        <div className="relative w-full h-full">
-                                                          {showLow && (
-                                                            <img 
-                                                              src={low}
-                                                              alt=""
-                                                              className="absolute inset-0 w-full h-full object-contain"
-                                                              loading={idx === 0 ? 'eager' : 'lazy'}
-                                                              decoding="async"
-                                                              onLoad={(e) => {
-                                                                if (!imageAspectRatio && idx === 0) {
-                                                                  const { naturalWidth, naturalHeight } = e.currentTarget;
-                                                                  if (naturalWidth && naturalHeight) {
-                                                                    setImageAspectRatio(naturalWidth / naturalHeight);
-                                                                  }
-                                                                }
-                                                              }}
-                                                              onError={() => {
-                                                                if (selectedProject?.id) {
-                                                                  setLowResAvailable((prev) => ({ ...prev, [selectedProject.id]: false }));
-                                                                }
-                                                              }}
-                                                            />
-                                                          )}
-                                                          <img 
-                                                            src={hi}
-                                                            alt=""
-                                                            className={`absolute inset-0 w-full h-full object-contain transition-opacity duration-300 ${shouldShowHi ? 'opacity-100' : 'opacity-0'}`}
-                                                            loading={idx === 0 ? 'eager' : 'lazy'}
-                                                            decoding="async"
-                                                            onLoad={() => {
-                                                              setHiResLoadedMap((prev) => ({ ...prev, [idx]: true }));
-                                                            }}
-                                                            onError={() => {
-                                                              if (!showLow) {
-                                                                setHiResLoadedMap((prev) => ({ ...prev, [idx]: true }));
-                                                              }
-                                                            }}
-                                                          />
-                                                        </div>
-                                                    </div>
-                                                );
-                                            })}
+                                            {sliderImages.map(renderSlide)}
                                           </div>
                                         </div>
                                       </div>
@@ -1302,7 +979,7 @@ const Portfolio: React.FC<PortfolioProps> = ({ lang, toggleLang, activeSlug = nu
                                  {/* 2. Header */}
                                  <div 
                                     onClick={() => setIsTextOpen(!isTextOpen)}
-                                    className={`mb-4 w-full cursor-pointer group select-none transition-opacity duration-300 ${sliderLoading ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}
+                                    className="mb-4 w-full cursor-pointer group select-none transition-opacity duration-300"
                                  >
                                    <div className="flex flex-row justify-between items-baseline">
                                      <div 
@@ -1388,8 +1065,11 @@ const Portfolio: React.FC<PortfolioProps> = ({ lang, toggleLang, activeSlug = nu
                                                                     style={{ width: `${(img.ratio / totalRatio) * 100}%`, height: '100%' }}
                                                                     onClick={() => handleThumbClick(img.originalIndex)}
                                                                 >
-                                                                    <img 
-                                                                      src={img.src} 
+                                                                    <ResponsiveImage
+                                                                      src={img.src}
+                                                                      image={getImageMetadata(imageManifest, img.src)}
+                                                                      sizes={`${Math.ceil(galleryWidth * img.ratio / totalRatio)}px`}
+                                                                      enabled={isGalleryOpen}
                                                                       alt="" 
                                                                       className="w-full h-full object-contain block bg-white" 
                                                                       loading="lazy"
@@ -1568,8 +1248,10 @@ const Portfolio: React.FC<PortfolioProps> = ({ lang, toggleLang, activeSlug = nu
                                                         style={{ width: `${(img.ratio / totalRatio) * 100}%`, height: '100%' }}
                                                         onClick={() => handleThumbClick(img.originalIndex)}
                                                     >
-                                                        <img 
-                                                          src={img.src} 
+                                                        <ResponsiveImage
+                                                          src={img.src}
+                                                          image={getImageMetadata(imageManifest, img.src)}
+                                                          sizes={`${Math.ceil(galleryWidth * img.ratio / totalRatio)}px`}
                                                           alt="" 
                                                           className="w-full h-full object-contain block bg-white" 
                                                           loading="lazy"
@@ -1603,55 +1285,7 @@ const Portfolio: React.FC<PortfolioProps> = ({ lang, toggleLang, activeSlug = nu
               style={sliderContainerStyle}
               onScroll={handleSliderScroll}
             >
-              {sliderImages.map((img, idx) => {
-                const hi = getFullImageUrl(img);
-                const low = getLowResAUrl(selectedProject, img);
-                const showHi = hiResLoadedMap[idx];
-                const allowLowRes = selectedProject?.id ? lowResAvailable[selectedProject.id] !== false : true;
-                const showLow = allowLowRes;
-                const shouldShowHi = showHi || !allowLowRes;
-                return (
-                  <div 
-                    key={idx} 
-                    className="flex-shrink-0 h-full flex items-center justify-center snap-start"
-                    style={sliderItemStyle}
-                  >
-                    <div className="relative w-full h-full">
-                      {showLow && (
-                        <img 
-                          src={low} 
-                          alt="" 
-                          className="absolute inset-0 w-full h-full object-contain select-none block"
-                          draggable={false}
-                          loading={idx === 0 ? 'eager' : 'lazy'}
-                          decoding="async"
-                          onError={() => {
-                            if (selectedProject?.id) {
-                              setLowResAvailable((prev) => ({ ...prev, [selectedProject.id]: false }));
-                            }
-                          }}
-                        />
-                      )}
-                      <img 
-                        src={hi} 
-                        alt="" 
-                        className={`absolute inset-0 w-full h-full object-contain select-none block transition-opacity duration-300 ${shouldShowHi ? 'opacity-100' : 'opacity-0'}`}
-                        draggable={false}
-                        loading={idx === 0 ? 'eager' : 'lazy'}
-                        decoding="async"
-                        onLoad={() => {
-                          setHiResLoadedMap((prev) => ({ ...prev, [idx]: true }));
-                        }}
-                        onError={() => {
-                          if (!showLow) {
-                            setHiResLoadedMap((prev) => ({ ...prev, [idx]: true }));
-                          }
-                        }}
-                      />
-                    </div>
-                  </div>
-                );
-              })}
+              {sliderImages.map(renderSlide)}
             </div>
         </div>
                     )
@@ -1666,12 +1300,12 @@ const Portfolio: React.FC<PortfolioProps> = ({ lang, toggleLang, activeSlug = nu
 
   // --- CAROUSEL VIEW RENDER (Main Menu) ---
   const currentProject = projects[displayIndex];
-  const currentSrc = currentProject ? getProjectParticleSrc(currentProject) : '';
-  const nextIndex = (displayIndex + 1) % projects.length;
-  const prevIndex = (displayIndex - 1 + projects.length) % projects.length;
-  const nextSrc = projects[nextIndex].imageUrl;
-  const prevSrc = projects[prevIndex].imageUrl;
-  const mobileImageWidth = `calc(100vw - ${MOBILE_SIDE_PADDING * 2}px)`;
+  const currentSrc = currentProject ? getProjectCoverSrc(currentProject) : '';
+  const coverImage = getImageMetadata(imageManifest, getProjectCoverOriginalSrc(currentProject));
+  const coverRatio = coverImage ? coverImage.width / coverImage.height : DEFAULT_SLIDER_RATIO;
+  const coverWidth = `min(calc(100vw - ${isMobile ? MOBILE_SIDE_PADDING * 2 : 160}px), calc((100dvh - ${isMobile ? 200 : 190}px) * ${coverRatio}))`;
+  const gaussianCover = currentProject.gaussianCover;
+  const hasGaussianCover = gaussianCover && resolveProjectImage(currentProject.folderPath, gaussianCover.image) === getProjectCoverOriginalSrc(currentProject);
 
   return (
     <div 
@@ -1685,13 +1319,10 @@ const Portfolio: React.FC<PortfolioProps> = ({ lang, toggleLang, activeSlug = nu
         onMouseLeave={onMouseLeave}
         style={isMobile ? { paddingLeft: MOBILE_SIDE_PADDING, paddingRight: MOBILE_SIDE_PADDING } : undefined}
     >
-      <div className="hidden">
-        <img src={nextSrc} alt="preload next" />
-        <img src={prevSrc} alt="preload prev" />
-      </div>
 
       <button 
         onClick={handlePrev}
+        aria-label="Previous project"
         className="hidden md:flex absolute left-2 md:left-6 top-1/2 -translate-y-1/2 p-4 text-[#F22C2C] hover:opacity-70 transition-opacity z-30 text-5xl font-light select-none"
         style={{ fontFamily: '"Doto", sans-serif' }}
       >
@@ -1700,6 +1331,7 @@ const Portfolio: React.FC<PortfolioProps> = ({ lang, toggleLang, activeSlug = nu
 
       <button 
         onClick={handleNext}
+        aria-label="Next project"
         className="hidden md:flex absolute right-2 md:right-6 top-1/2 -translate-y-1/2 p-4 text-[#F22C2C] hover:opacity-70 transition-opacity z-30 text-5xl font-light select-none"
         style={{ fontFamily: '"Doto", sans-serif' }}
       >
@@ -1714,155 +1346,34 @@ const Portfolio: React.FC<PortfolioProps> = ({ lang, toggleLang, activeSlug = nu
         "
       >
         <div className="absolute inset-0 pointer-events-none" />
-        <div className="absolute bottom-4 left-4 z-30 flex flex-col items-start gap-2 pointer-events-auto">
-          {!showTestPanel && (
-            <button
-              type="button"
-              onClick={() => setShowTestPanel(true)}
-              title={lang === 'en' ? 'Particle settings' : '粒子设置'}
-              className="w-9 h-9 flex items-center justify-center text-xs border border-black bg-white/90 backdrop-blur hover:bg-black hover:text-white transition-colors rounded-full shadow-sm"
-            >
-              ⚙
-            </button>
-          )}
-        {/* TEMP Controls (hidden by default) */}
-        {showTestPanel && (
-          <div className="bg-white/92 backdrop-blur shadow-md border border-black/10 rounded-lg p-3 flex flex-col gap-2 text-xs w-[min(280px,calc(100vw-2rem))] max-h-[70vh] overflow-y-auto">
-              <div className="flex items-center justify-between">
-                <div className="font-semibold text-[11px]">
-                  {lang === 'en' ? 'Particle Panel' : '粒子测试面板'}
-                </div>
-                <button className="text-[11px] px-1" onClick={() => setShowTestPanel(false)}>
-                  {lang === 'en' ? 'Close' : '关闭'}
-                </button>
-              </div>
-              <label className="flex items-center gap-2">
-                <span className="w-14">
-                  {lang === 'en' ? 'Density' : '密度'}
-                </span>
-                <input 
-                  type="range" 
-                  min={2} max={10} step={0.5} 
-                  value={particleGap} 
-                  onChange={(e) => setParticleGap(parseFloat(e.target.value))}
-                  className="flex-1"
-                />
-                <span className="w-8 text-right">{particleGap}</span>
-              </label>
-              <label className="flex items-center gap-2">
-                <span className="w-14">
-                  {lang === 'en' ? 'Size' : '大小'}
-                </span>
-                <input 
-                  type="range" 
-                  min={0.5} max={4} step={0.1} 
-                  value={particleDotRadius} 
-                  onChange={(e) => setParticleDotRadius(parseFloat(e.target.value))}
-                  className="flex-1"
-                />
-                <span className="w-8 text-right">{particleDotRadius.toFixed(1)}</span>
-              </label>
-              <div className="flex items-center gap-2">
-                <span className="w-14">
-                  {lang === 'en' ? 'Layout' : '排布'}
-                </span>
-                <div className="flex-1 flex gap-1">
-                  <button
-                    type="button"
-                    onClick={() => setParticleJitterSampling(true)}
-                    className={`flex-1 px-2 py-1 border rounded transition-colors ${particleJitterSampling ? 'bg-black text-white border-black' : 'bg-white text-black border-black/20 hover:border-black'}`}
-                  >
-                    {lang === 'en' ? 'Stagger' : '交错'}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setParticleJitterSampling(false)}
-                    className={`flex-1 px-2 py-1 border rounded transition-colors ${!particleJitterSampling ? 'bg-black text-white border-black' : 'bg-white text-black border-black/20 hover:border-black'}`}
-                  >
-                    {lang === 'en' ? 'Regular' : '规则'}
-                  </button>
-                </div>
-              </div>
-              <label className="flex items-center gap-2">
-                <span className="w-14">
-                  {lang === 'en' ? 'Size Mix' : '混合'}
-                </span>
-                <input
-                  type="range"
-                  min={0}
-                  max={1.8}
-                  step={0.05}
-                  value={particleSizeMix}
-                  onChange={(e) => setParticleSizeMix(parseFloat(e.target.value))}
-                  className="flex-1"
-                />
-                <span className="w-8 text-right">{particleSizeMix.toFixed(1)}</span>
-              </label>
-              <div className="flex items-center gap-2">
-                <span className="w-14">
-                  {lang === 'en' ? 'Flow' : '流向'}
-                </span>
-                <div className="flex-1 flex gap-1">
-                  <button
-                    type="button"
-                    onClick={() => setParticleDirectionalFlow(true)}
-                    className={`flex-1 px-2 py-1 border rounded transition-colors ${particleDirectionalFlow ? 'bg-black text-white border-black' : 'bg-white text-black border-black/20 hover:border-black'}`}
-                  >
-                    {lang === 'en' ? 'Directional' : '方向'}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setParticleDirectionalFlow(false)}
-                    className={`flex-1 px-2 py-1 border rounded transition-colors ${!particleDirectionalFlow ? 'bg-black text-white border-black' : 'bg-white text-black border-black/20 hover:border-black'}`}
-                  >
-                    {lang === 'en' ? 'Neutral' : '中性'}
-                  </button>
-                </div>
-              </div>
-              {currentProject?.fpImages?.length ? (
-                <button 
-                  onClick={() => {
-                    cycleFpImage(currentProject.id);
-                  }}
-                  className="mt-1 w-full px-2 py-1 border border-black text-black hover:bg-black hover:text-white transition-colors text-[11px] rounded"
-                >
-                  {lang === 'en' ? 'Next Cover' : '下一张封面'}
-                </button>
-              ) : null}
-          </div>
-        )}
-        </div>
-        <div 
-            className={`flex flex-col gap-2 cursor-pointer group w-min relative transition-all duration-300
-              ${isMobile ? 'items-center w-full' : 'items-center'}
-            `}
+        <div
+            className="flex flex-col items-center gap-2 cursor-pointer group relative"
+            style={{ width: coverWidth }}
             onClick={() => handleProjectClick(currentProject)}
         >
-            <ParticleImage 
-                src={currentSrc} 
-                alt={currentProject.title['en']} 
-                gap={particleGap}
-                dotRadius={particleDotRadius}
-                jitterSampling={particleJitterSampling}
-                sizeMix={particleSizeMix}
-                directionalFlow={particleDirectionalFlow}
-                slideDirection={slideDirection}
-                colorBoost={COLOR_BOOST}
-                className={`
-                  block h-auto object-contain select-none
-                  ${isMobile 
-                    ? 'max-h-[82vh] min-w-[260px] mx-auto w-full' 
-                    : 'w-auto max-h-[85vh] max-w-[85vw] min-w-[450px] mx-auto'
-                  }
-                `}
-                style={isMobile ? { width: mobileImageWidth, maxWidth: mobileImageWidth } : undefined}
-            />
+            {hasGaussianCover ? <GaussianCover
+                key={`gaussian-${currentProject.id}`}
+                sceneUrl={resolveProjectImage(currentProject.folderPath, gaussianCover.scene)}
+                width={coverImage?.width || 3}
+                height={coverImage?.height || 2}
+                mobile={isMobile || window.matchMedia('(pointer: coarse)').matches}
+                lang={lang}
+                alt={currentProject.title.en}
+            /> : <ResponsiveImage
+                src={currentSrc}
+                image={coverImage}
+                onLoad={handleCoverLoaded}
+                alt={currentProject.title.en}
+                sizes={coverWidth}
+                loading="eager"
+                decoding="async"
+                fetchPriority="high"
+                className="block w-full h-auto select-none"
+                style={{ width: '100%' }}
+            />}
 
-            <div 
-                className={`flex flex-row justify-between items-baseline relative z-20 animate-in fade-in duration-500 gap-8 w-full 
-                  ${isMobile ? 'w-full' : 'max-w-[85vw] min-w-[450px]'}
-                `}
-                style={isMobile ? { maxWidth: mobileImageWidth } : undefined}
+            <div
+                className="flex flex-row justify-between items-baseline relative z-20 gap-6 w-full"
                 key={currentProject.id}
             >
                 {/* Rule: Title ALWAYS English */}

@@ -17,7 +17,8 @@ export interface Project {
   description: MultiLangString;
   imageUrl: string;
   hidden?: boolean;
-  fpImages?: string[]; // Images located in FP subfolder for particle covers
+  fpImages?: string[];
+  gaussianCover?: { image: string; scene: string };
   // Path to the specific folder containing detailed assets/layout for this project
   // e.g., "portfolio/1"
   folderPath?: string; 

@@ -32,3 +32,36 @@ Useful commands:
 
 - `npm run normalize:portfolio -- <projectId>`: convert mixed source formats in `A` and `B` into sequential `.jpg` files and rebuild `C` / `C/B`
 - `npm run lowres`: regenerate low-resolution files for every project
+
+Image delivery is prepared automatically before `npm run dev` and `npm run build`.
+`npm run images:optimize` generates WebP variants at 640, 1280, and 1920 pixels
+without enlarging small images, plus a manifest containing dimensions and the
+existing A/B/FP image order. Originals are preserved. Generated files under
+`public/portfolio/optimized/` and `public/portfolio/image-manifest.json` are
+ignored by Git and included in the production build. Content hashes invalidate
+changed images; unchanged derivatives are reused on subsequent builds.
+
+## 3D cover preview
+
+Five project covers use real Gaussian scenes inferred offline with
+[Apple SHARP](https://github.com/apple/ml-sharp) and rendered with
+[Spark for Three.js](https://sparkjs.dev/). Desktop and mobile both load 3D
+directly, with a progress indicator and no photograph placeholder. Mobile uses
+the smaller scene in `scene.json`; rendering stops when the camera is idle or
+the cover is off screen. `As If a Cut of Light` and `The Last Talk` retain their
+photograph covers while further conversion is paused. Mobile gyroscope control
+has not been added yet; the existing pointer and touch interaction remains.
+
+Generated scenes live in `public/portfolio/<id>/GS/`. The project's
+`gaussianCover.image` identifies its original FP image, and `gaussianCover.scene`
+points to the scene manifest. Python and model weights are only needed to
+regenerate scenes, not to run or build the website.
+
+`scripts/generate-cover-3dgs.py` accepts `--input`, `--checkpoint`, `--sharp-root`,
+`--output`, and `--device cpu|mps|cuda`. It writes compressed SPZ files and a
+manifest for both full and mobile quality. A separate Python 3.11 environment
+was used on Intel macOS with torch 2.2.2, torchvision 0.17.2, numpy < 2,
+timm 1.0.20, scipy, plyfile, pillow-heif, imageio, click, and matplotlib.
+SHARP's code and model are governed by its
+[code license](https://github.com/apple/ml-sharp/blob/main/LICENSE) and
+[research model license](https://github.com/apple/ml-sharp/blob/main/LICENSE_MODEL).

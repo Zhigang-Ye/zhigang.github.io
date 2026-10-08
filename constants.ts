@@ -2,7 +2,7 @@
 import { Project, Lang, MultiLangString } from './types';
 
 export const NAV_ITEMS = [
-  { label: 'ABOUT', view: 'ABOUT' as const },
+  { label: 'HOME', view: 'ABOUT' as const },
   { label: 'PORTFOLIO', view: 'PORTFOLIO' as const },
   { label: 'TEXT', view: 'TEXT' as const },
   { label: 'BIOGRAPHY', view: 'BIOGRAPHY' as const },
@@ -10,7 +10,7 @@ export const NAV_ITEMS = [
 
 export const TRANSLATIONS: Record<string, Record<Lang, string>> = {
   // Navigation
-  ABOUT: { en: 'ABOUT', cn: '关于', tw: '關於' },
+  ABOUT: { en: 'HOME', cn: '首页', tw: '首頁' },
   PORTFOLIO: { en: 'PORTFOLIO', cn: '作品', tw: '作品' },
   TEXT: { en: 'TEXT', cn: '文字', tw: '文字' },
   BIOGRAPHY: { en: 'BIOGRAPHY', cn: '简历', tw: '簡歷' },
